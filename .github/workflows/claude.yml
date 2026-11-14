@@ -34,14 +34,46 @@ jobs:
       issues: write
       id-token: write
       actions: read # PRのCI結果を読むため
+    # Claudeがテストを実行してからコミットできるよう、CIと同じ環境を用意する
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ppassword"
+          --health-interval=5s --health-retries=20
+    env:
+      RAILS_ENV: test
+      DB_HOST: 127.0.0.1
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: backend
+          bundler-cache: true
+
+      - name: テスト用DBを準備
+        working-directory: backend
+        run: bin/rails db:create db:schema:load
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: フロントエンドの依存をインストール
+        working-directory: frontend
+        run: npm ci
 
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: |
-            --append-system-prompt "日本語で応答してください。作業前にリポジトリ直下の CLAUDE.md を読み、規約に従ってください。"
+            --append-system-prompt "日本語で応答してください。作業前にリポジトリ直下の CLAUDE.md を読み、規約に従ってください。テスト環境は準備済みです（MySQLはサービスコンテナで起動、テスト用DB作成済み、gemとnpmパッケージもインストール済み）。コードを変更したら、コミット前に backend で bundle exec rspec と bin/rubocop、frontend で npm run lint と npx tsc --noEmit を実行し、すべて通ることを確認してください。"
