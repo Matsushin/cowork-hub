@@ -35,3 +35,7 @@
 指摘しないこと
 - RuboCop・ESLint・`terraform fmt` で自動検出できる書式の問題（CIで検出済み）
 - 根拠のない好みの押し付け
+
+## GitHub Actionsでの運用メモ
+- レビュー用・`@claude` 用のワークフローは、mainに入ってから有効になる（PR内で変更しても、そのPRでは動かない）
+- `@claude` のpushは専用GitHub Appのトークンで行うので、CIと自動レビューが再実行される
