@@ -48,6 +48,18 @@ jobs:
       RAILS_ENV: test
       DB_HOST: 127.0.0.1
     steps:
+      # 専用GitHub Appのトークンを発行する。
+      # GITHUB_TOKENでのpushはほかのワークフローを起動しないため、
+      # Appのトークンでpushして、Claudeの修正にもCIと自動レビューが走るようにする。
+      # （CLAUDE_APP_ID が未設定なら、このステップは飛ばして既定のトークンで動く）
+      - name: GitHub Appのトークンを発行
+        id: app-token
+        if: vars.CLAUDE_APP_ID != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.CLAUDE_APP_ID }}
+          private-key: ${{ secrets.CLAUDE_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1
@@ -75,5 +87,6 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
             --append-system-prompt "日本語で応答してください。作業前にリポジトリ直下の CLAUDE.md を読み、規約に従ってください。テスト環境は準備済みです（MySQLはサービスコンテナで起動、テスト用DB作成済み、gemとnpmパッケージもインストール済み）。コードを変更したら、コミット前に backend で bundle exec rspec と bin/rubocop、frontend で npm run lint と npx tsc --noEmit を実行し、すべて通ることを確認してください。"
