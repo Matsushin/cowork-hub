@@ -9,7 +9,7 @@ SUBNETS="$(jq -r '.subnets | join(",")' <<<"$NETWORK")"
 SGS="$(jq -r '.security_groups | join(",")' <<<"$NETWORK")"
 
 TASK_ARN="$(aws ecs run-task --cluster "$CLUSTER" --launch-type FARGATE \
-  --task-definition coworking-sample-backend \
+  --task-definition cowork-hub-backend \
   --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SGS],assignPublicIp=ENABLED}" \
   --overrides '{"containerOverrides":[{"name":"backend","command":["./bin/rails","db:prepare","db:seed"]}]}' \
   --query 'tasks[0].taskArn' --output text)"
