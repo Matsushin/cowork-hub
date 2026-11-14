@@ -114,6 +114,8 @@ terraform -chdir=infra destroy                      # すべて削除（デー�
 ## 学習用として割り切っている点
 
 - HTTPSなし（独自ドメインを用意したら、ACM＋ALBの443リスナーを追加）
+  - ブラウザ → ALB に加えて、Next.jsのサーバー → Rails もALB（HTTP）経由のため、トークンやパスワードが平文で流れる。
+    **HTTPS化、または内部通信（Service Connect／内部ALB）にするまでは本番利用しない**
 - Terraformのstateをローカルに置いている（チームで使う場合はS3バックエンドへ）
 - NAT Gatewayを使わず、ECSタスクをパブリックサブネットに置いている（セキュリティグループでALBからの通信だけ許可）
 - RDSはシングルAZで、削除時にスナップショットを作らない

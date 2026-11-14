@@ -3,7 +3,13 @@ import { ApiError } from "@/lib/api-error";
 import { getSessionToken } from "./session";
 
 // Rails APIの接続先。ローカルは .env.development、本番はECSタスクの環境変数で指定する
-const API_ORIGIN = process.env.API_ORIGIN ?? "http://localhost:3001";
+function apiOrigin() {
+  const origin = process.env.API_ORIGIN;
+  if (origin) return origin;
+  // 本番で設定漏れに気づけるよう、黙ってlocalhostにフォールバックしない
+  if (process.env.NODE_ENV === "production") throw new Error("環境変数 API_ORIGIN が設定されていません");
+  return "http://localhost:3001";
+}
 
 type Options = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -23,7 +29,7 @@ export async function apiFetch<T>(path: string, { method = "GET", body, auth = t
 
   let res: Response;
   try {
-    res = await fetch(`${API_ORIGIN}/api${path}`, {
+    res = await fetch(`${apiOrigin()}/api${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,

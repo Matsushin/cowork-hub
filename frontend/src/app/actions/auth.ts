@@ -16,6 +16,7 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
       auth: false,
       body: { email_address: formData.get("email_address"), password: formData.get("password") },
     }),
+    { redirectOnUnauthorized: false }, // 401は「メールアドレスまたはパスワードが違う」として表示する
   );
   if (!result.ok) return result.state;
   await setSessionToken(result.data.token);
