@@ -18,6 +18,12 @@
 - APIはすべて `/api` 配下。本番ではALBが `/api/*` をRailsへ振り分ける
 - 認証は `Authorization: Bearer <token>`（Sessionモデルのトークン）
 - バリデーションエラーは422で `{ error, errors: { 項目名: [メッセージ] } }` を返す
+- APIの仕様書は OpenAPI（`backend/swagger/v1/openapi.yaml`）。`spec/integration` のrswagのテストから生成し、レスポンスがスキーマどおりかも検証する。
+  スキーマ（`components.schemas`）は `spec/swagger_helper.rb` に書く。APIを追加・変更したら
+  1. `spec/integration` にテストを追加し、必要ならスキーマを直す
+  2. `cd backend && bin/rails rswag:specs:swaggerize` で仕様書を再生成
+  3. `cd frontend && npm run gen:api` で型（`src/lib/api-schema.ts`）を再生成。フロントは `lib/types.ts` の別名を使う
+  CIで、生成物がコミットされているかを確認している
 - フロントのデータ取得は Server Components（`lib/server/api.ts` の `apiFetch`）、更新は Server Actions（`app/actions/`）で行う。
   ブラウザからRails APIを直接呼ばない。クライアントコンポーネントは操作が必要な部分だけにする
 - 認証トークンは httpOnly Cookie（`lib/server/session.ts`）。ページの認可は `requireUser` / `requireAdmin`
