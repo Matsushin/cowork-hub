@@ -1,12 +1,13 @@
 import { AdminNav } from "@/components/AdminNav";
-import { RequireAuth } from "@/components/RequireAuth";
+import { requireAdmin } from "@/lib/server/session";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requireAdmin();
   return (
-    <RequireAuth admin>
+    <>
       <h1 className="mb-4 text-2xl font-bold">管理</h1>
       <AdminNav />
       {children}
-    </RequireAuth>
+    </>
   );
 }

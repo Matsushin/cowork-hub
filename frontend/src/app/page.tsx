@@ -1,30 +1,20 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { api, yen } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
-import type { Plan } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { yen } from "@/lib/format";
+import { apiFetch } from "@/lib/server/api";
+import { getCurrentUser } from "@/lib/server/session";
+import type { Plan } from "@/lib/types";
 
-export default function Home() {
-  const { user } = useAuth();
-  const [plans, setPlans] = useState<Plan[]>([]);
-
-  useEffect(() => {
-    api<Plan[]>("/plans").then(setPlans).catch(() => {});
-  }, []);
+export default async function Home() {
+  const [user, plans] = await Promise.all([getCurrentUser(), apiFetch<Plan[]>("/plans", { auth: false })]);
 
   return (
     <div className="space-y-10">
       <section className="space-y-4 py-6">
         <h1 className="text-3xl font-bold tracking-tight">席も会議室も、30分単位でオンライン予約</h1>
         <p className="text-muted-foreground">フリー席・会議室の空き状況を確認して、その場で予約できます。</p>
-        <Link
-          href={user ? "/reserve" : "/signup"}
-          className={buttonVariants({ size: "lg", className: "px-5" })}
-        >
+        <Link href={user ? "/reserve" : "/signup"} className={buttonVariants({ size: "lg", className: "px-5" })}>
           {user ? "空き状況を見る" : "無料で会員登録"}
         </Link>
       </section>

@@ -1,25 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth";
 import { Header } from "@/components/Header";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+import { getCurrentUser } from "@/lib/server/session";
 
 export const metadata: Metadata = {
   title: "Cowork Base",
   description: "コワーキングスペースの予約・会員管理サンプル",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
   return (
-    <html lang="ja" className={cn("font-sans", geist.variable)}>
+    <html lang="ja">
       <body className="min-h-screen antialiased">
-        <AuthProvider>
-          <Header />
-          <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
-        </AuthProvider>
+        <Header user={user} />
+        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
       </body>
     </html>
   );

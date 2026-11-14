@@ -1,15 +1,10 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { logout } from "@/app/actions/auth";
 import { Button, buttonVariants } from "@/components/ui/button";
+import type { User } from "@/lib/types";
+import { NavLinks } from "./NavLinks";
 
-export function Header() {
-  const { user, logout } = useAuth();
-  const pathname = usePathname();
-  const router = useRouter();
-
+export function Header({ user }: { user: User | null }) {
   const links = user
     ? [
         { href: "/reserve", label: "予約する" },
@@ -25,36 +20,25 @@ export function Header() {
         <Link href="/" className="font-bold tracking-tight text-primary">
           Cowork Base
         </Link>
-        <nav className="flex flex-1 flex-wrap gap-4 text-sm">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={pathname.startsWith(l.href) ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground"}
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+        <NavLinks links={links} />
         <div className="flex items-center gap-3 text-sm">
           {user ? (
             <>
               <span className="text-muted-foreground">{user.name} さん</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  await logout();
-                  router.push("/");
-                }}
-              >
-                ログアウト
-              </Button>
+              <form action={logout}>
+                <Button type="submit" variant="ghost" size="sm">
+                  ログアウト
+                </Button>
+              </form>
             </>
           ) : (
             <>
-              <Link href="/login" className="text-muted-foreground hover:text-foreground">ログイン</Link>
-              <Link href="/signup" className={buttonVariants({ size: "sm" })}>会員登録</Link>
+              <Link href="/login" className="text-muted-foreground hover:text-foreground">
+                ログイン
+              </Link>
+              <Link href="/signup" className={buttonVariants({ size: "sm" })}>
+                会員登録
+              </Link>
             </>
           )}
         </div>

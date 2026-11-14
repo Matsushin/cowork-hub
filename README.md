@@ -20,7 +20,7 @@ Claude Codeの学習用に、Rails API＋Next.jsで作り、AWS（ECS Fargate）
 
 ```
 backend/    Rails 8.1（APIモード）＋MySQL 8.4、RSpec
-frontend/   Next.js 15（App Router）＋Tailwind CSS v4＋shadcn/ui
+frontend/   Next.js 15（App Router・Server Components）＋Tailwind CSS v4＋shadcn/ui
 infra/      Terraform（VPC / ALB / ECS Fargate / RDS MySQL / ECR）
 bin/        デプロイ・seed用スクリプト
 ```
@@ -32,7 +32,10 @@ bin/        デプロイ・seed用スクリプト
             └────────────────────────────────────────┘
 ```
 
-フロントエンドは同じドメインの `/api` を呼び出します。そのためCORSの設定は不要です。ローカルでは、Next.jsのrewritesでRailsへ転送します。
+フロントエンドは、データの取得を **Server Components**、更新を **Server Actions** で行います。どちらもNext.jsのサーバーからRails APIを呼ぶので、ブラウザがRailsを直接呼ぶことはありません。
+
+- 認証トークンは httpOnly Cookie に保存します。JavaScriptからは読めません
+- Rails APIの接続先は環境変数 `API_ORIGIN` で指定します（ローカルは `frontend/.env.development`、本番はALBのURL）
 
 ## ローカル開発
 
