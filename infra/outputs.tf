@@ -1,5 +1,10 @@
 output "app_url" {
-  value = "http://${aws_lb.main.dns_name}"
+  value = local.app_origin
+}
+
+output "delegation_name_servers" {
+  description = "親ゾーンに登録するNSレコードの値（HTTPS有効時のみ）"
+  value       = local.https_enabled ? aws_route53_zone.app[0].name_servers : null
 }
 
 output "ecr_repository_urls" {

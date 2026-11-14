@@ -30,3 +30,13 @@ variable "desired_count" {
   type        = number
   default     = 1
 }
+
+variable "domain_name" {
+  description = <<-EOT
+    アプリを公開するドメイン（例: coworking.example.com）。
+    指定するとRoute 53のホストゾーン・ACM証明書・HTTPSリスナーを作り、HTTPはHTTPSへリダイレクトする。
+    null（未指定）ならALBのDNS名でHTTPのみ。値は terraform.tfvars に書く（.gitignore済み）
+  EOT
+  type        = string
+  default     = null
+}

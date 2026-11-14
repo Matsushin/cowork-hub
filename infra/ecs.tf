@@ -147,9 +147,10 @@ resource "aws_ecs_task_definition" "frontend" {
     portMappings = [{ containerPort = 3000, protocol = "tcp" }]
     environment = [
       # Server Components / Server Actions からRails APIを呼ぶ接続先（ALB経由で /api/* がRailsに届く）
-      { name = "API_ORIGIN", value = "http://${aws_lb.main.dns_name}" },
-      # HTTPS化したら "true" にしてCookieにSecure属性を付ける
-      { name = "COOKIE_SECURE", value = "false" },
+      # HTTPSが有効なら https://<ドメイン> になり、サーバー間の通信も暗号化される
+      { name = "API_ORIGIN", value = local.app_origin },
+      # HTTPSが有効ならCookieにSecure属性を付ける
+      { name = "COOKIE_SECURE", value = tostring(local.https_enabled) },
     ]
     logConfiguration = {
       logDriver = "awslogs"

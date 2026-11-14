@@ -87,6 +87,33 @@ terraform -chdir=infra apply -var desired_count=0   # タスクだけ停止（AL
 terraform -chdir=infra destroy                      # すべて削除（データも消えます）
 ```
 
+### 独自ドメインでHTTPS化する
+
+`domain_name` を指定すると、Route 53のホストゾーン・ACM証明書・HTTPSリスナーを作ります。HTTPはHTTPSへリダイレクトし、Next.jsのサーバーからRailsへの通信もHTTPS（`API_ORIGIN=https://<ドメイン>`）になります。Cookieには `Secure` 属性が付きます。
+
+親ドメイン（例：`example.com`）が**別のAWSアカウント**にある前提で、サブドメイン（例：`coworking.example.com`）だけをこのアカウントに委任します。親ドメインのほかの設定（メールなど）には影響しません。
+
+```bash
+cp infra/terraform.tfvars.example infra/terraform.tfvars
+# terraform.tfvars に domain_name = "coworking.example.com" を書く（.gitignore済み）
+
+# 1. サブドメインのホストゾーンだけを先に作る
+terraform -chdir=infra apply -target=aws_route53_zone.app
+terraform -chdir=infra output delegation_name_servers
+```
+
+2. 親ドメインがあるAWSアカウントのRoute 53で、親のホストゾーンにNSレコードを追加します。
+   - レコード名：`coworking`（サブドメイン部分）
+   - タイプ：NS
+   - 値：上で表示された4つのネームサーバー
+
+```bash
+# 3. 残りを作る（証明書のDNS検証が終わるまで数分待つ）
+terraform -chdir=infra apply
+```
+
+費用の追加は、ホストゾーン（月60円程度）だけです。ACMの証明書は無料です。
+
 ## Claude Codeによるコードレビュー
 
 [Claude Code GitHub Action](https://github.com/anthropics/claude-code-action) を使っています。
@@ -113,9 +140,8 @@ terraform -chdir=infra destroy                      # すべて削除（デー�
 
 ## 学習用として割り切っている点
 
-- HTTPSなし（独自ドメインを用意したら、ACM＋ALBの443リスナーを追加）
-  - ブラウザ → ALB に加えて、Next.jsのサーバー → Rails もALB（HTTP）経由のため、トークンやパスワードが平文で流れる。
-    **HTTPS化、または内部通信（Service Connect／内部ALB）にするまでは本番利用しない**
+- 独自ドメインを指定しない場合はHTTPのみ。パスワードやトークンが平文で流れるので、**HTTPS化するまでは本番利用しない**
+- Next.jsのサーバー → Rails は、HTTPS化してもALB（インターネット側）を経由する。内部通信（Service Connect）にはしていない
 - Terraformのstateをローカルに置いている（チームで使う場合はS3バックエンドへ）
 - NAT Gatewayを使わず、ECSタスクをパブリックサブネットに置いている（セキュリティグループでALBからの通信だけ許可）
 - RDSはシングルAZで、削除時にスナップショットを作らない
