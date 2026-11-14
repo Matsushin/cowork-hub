@@ -78,12 +78,18 @@ type InputLikeProps = {
  * ラベル付きの入力欄
  * 子要素の name で React Hook Form に登録し、その項目のエラー（ブラウザでのチェック → サーバーの順）を下に表示する。
  * Rails が別名でエラーを返す項目（location_id → location など）は errorKey で指定する
+ *
+ * 注意：直下の子要素は入力要素1つにし、name を付ける（フラグメントや <div> で包むと登録されず、
+ * スキーマのエラーだけが残って表示先がないまま送信できなくなる）
  */
 export function Field({ label, errorKey, children }: { label: string; errorKey?: string; children: React.ReactNode }) {
   const ctx = useContext(FormErrorsContext);
   const id = useId();
   const child = isValidElement<InputLikeProps>(children) ? children : null;
   const name = child?.props.name;
+  if (process.env.NODE_ENV !== "production" && ctx && !name) {
+    console.warn(`<Field label="${label}"> の直下に name 付きの入力要素がないため、React Hook Form に登録されません`);
+  }
 
   const clientError = name ? ctx?.form.formState.errors[name]?.message : undefined;
   const serverError = [...(name ? (ctx?.serverErrors[name] ?? []) : []), ...(errorKey ? (ctx?.serverErrors[errorKey] ?? []) : [])];
