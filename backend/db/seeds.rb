@@ -2,26 +2,45 @@ drop_in = Plan.find_or_create_by!(name: "ドロップイン") do |p|
   p.kind = :drop_in
   p.price = 0
   p.monthly_hours_limit = 8
-  p.description = "月8時間まで予約可能。利用料は当日払い"
+  p.description = "月額0円。全国の拠点を使った分だけ時間課金。会議室の予約は月8時間まで"
 end
 Plan.find_or_create_by!(name: "月額ライト") do |p|
   p.kind = :monthly
   p.price = 8800
-  p.monthly_hours_limit = 40
-  p.description = "月40時間まで予約可能"
+  p.monthly_hours_limit = 10
+  p.description = "全国の拠点がドロップイン使い放題。会議室の予約は月10時間まで"
 end
 Plan.find_or_create_by!(name: "月額フル") do |p|
   p.kind = :monthly
   p.price = 16500
   p.monthly_hours_limit = nil
-  p.description = "予約時間無制限"
+  p.description = "全国の拠点がドロップイン使い放題。会議室の予約も時間無制限"
 end
 
-[
-  [ "フリー席A", :seat, 1 ], [ "フリー席B", :seat, 1 ], [ "フリー席C", :seat, 1 ],
-  [ "会議室（4名）", :meeting_room, 4 ], [ "会議室（8名）", :meeting_room, 8 ]
-].each do |name, kind, capacity|
-  Space.find_or_create_by!(name:) { |s| s.kind = kind; s.capacity = capacity }
+locations = [
+  { name: "川西駅前", prefecture: "兵庫県", address: "川西市栄町1-1", open_hour: 9, close_hour: 21,
+    hourly_price: 300, daily_max_price: 1500, description: "駅から徒歩2分。電源・Wi-Fi完備" },
+  { name: "梅田", prefecture: "大阪府", address: "大阪市北区梅田2-2", open_hour: 8, close_hour: 22,
+    hourly_price: 400, daily_max_price: 2000, description: "大阪駅すぐ。個室ブースあり" },
+  { name: "渋谷", prefecture: "東京都", address: "渋谷区道玄坂3-3", open_hour: 7, close_hour: 23,
+    hourly_price: 500, daily_max_price: 2500, description: "早朝から深夜まで営業" },
+  { name: "博多", prefecture: "福岡県", address: "福岡市博多区博多駅前4-4", open_hour: 9, close_hour: 20,
+    hourly_price: 300, daily_max_price: 1200, description: "出張時の作業に" }
+].map do |attrs|
+  Location.find_or_create_by!(name: attrs[:name]) { |l| l.assign_attributes(attrs) }
+end
+
+locations.each do |location|
+  [
+    [ "フリー席A", :seat, 1, 0 ], [ "フリー席B", :seat, 1, 0 ],
+    [ "会議室（4名）", :meeting_room, 4, 1000 ], [ "会議室（8名）", :meeting_room, 8, 2000 ]
+  ].each do |name, kind, capacity, hourly_price|
+    location.spaces.find_or_create_by!(name:) do |s|
+      s.kind = kind
+      s.capacity = capacity
+      s.hourly_price = hourly_price
+    end
+  end
 end
 
 # 開発用アカウント（本番では SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD を指定）
@@ -41,5 +60,16 @@ unless Rails.env.production?
     u.name = "会員 太郎"
     u.password = "password123"
   end
-  member.change_plan!(drop_in) unless member.current_plan
+  member.change_plan!(drop_in, on: Date.current.beginning_of_month) unless member.current_plan
+
+  # 利用履歴と請求画面の確認用に、今月のドロップイン利用を入れておく
+  if member.visits.none?
+    first = locations.first
+    [ [ 3, 10, 13 ], [ 2, 9, 18 ] ].each do |days_ago, from, to|
+      date = Date.current - days_ago
+      next unless date.month == Date.current.month
+      visit = member.visits.create!(location: first, checked_in_at: date.in_time_zone.change(hour: from))
+      visit.check_out!(at: date.in_time_zone.change(hour: to))
+    end
+  end
 end

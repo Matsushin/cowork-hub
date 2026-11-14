@@ -4,7 +4,7 @@ import { ActionButton } from "@/components/form";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatDateTime, formatTime } from "@/lib/format";
+import { formatDateTime, formatTime, yen } from "@/lib/format";
 import { apiFetch } from "@/lib/server/api";
 import { requireUser } from "@/lib/server/session";
 import type { Reservation } from "@/lib/types";
@@ -23,14 +23,20 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
           <Link
             href="/reservations"
             aria-current={upcomingOnly ? "page" : undefined}
-            className={buttonVariants({ size: "sm", variant: upcomingOnly ? "default" : "outline" })}
+            className={buttonVariants({
+              size: "sm",
+              variant: upcomingOnly ? "default" : "outline",
+            })}
           >
             今後の予約
           </Link>
           <Link
             href="/reservations?filter=all"
             aria-current={upcomingOnly ? undefined : "page"}
-            className={buttonVariants({ size: "sm", variant: upcomingOnly ? "outline" : "default" })}
+            className={buttonVariants({
+              size: "sm",
+              variant: upcomingOnly ? "outline" : "default",
+            })}
           >
             すべて
           </Link>
@@ -46,7 +52,10 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
               <p className="font-medium">
                 {formatDateTime(r.starts_at)}〜{formatTime(r.ends_at)}
               </p>
-              <p className="text-sm text-muted-foreground">{r.space.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {r.space.location?.name}　{r.space.name}
+                {r.amount > 0 && `　${yen(r.amount)}`}
+              </p>
             </div>
             {r.status === "canceled" ? (
               <Badge variant="secondary">キャンセル済み</Badge>
@@ -54,7 +63,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
               <ActionButton
                 variant="destructive"
                 action={cancelReservation.bind(null, r.id)}
-                confirmMessage={`${r.space.name} ${formatDateTime(r.starts_at)} の予約をキャンセルしますか？`}
+                confirmMessage={`${r.space.location?.name} ${r.space.name} ${formatDateTime(r.starts_at)} の予約をキャンセルしますか？`}
               >
                 キャンセル
               </ActionButton>

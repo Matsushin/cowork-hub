@@ -10,12 +10,12 @@ default: &default
 
 development:
   <<: *default
-  database: coworking_development
+  database: cowork_hub_development
 
 test:
   <<: *default
-  database: coworking_test
+  database: cowork_hub_test
 
 production:
   <<: *default
-  database: <%= ENV.fetch("DB_NAME") { "coworking_production" } %>
+  database: <%= ENV.fetch("DB_NAME") { "cowork_hub_production" } %>

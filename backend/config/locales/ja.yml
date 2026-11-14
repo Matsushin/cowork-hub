@@ -14,6 +14,19 @@ ja:
         name: 名前
         capacity: 定員
         kind: 種別
+        hourly_price: 1時間料金
+        location: 拠点
+      location:
+        name: 拠点名
+        prefecture: 都道府県
+        address: 住所
+        open_hour: 開店時刻
+        close_hour: 閉店時刻
+        hourly_price: 1時間料金
+        daily_max_price: 1日上限料金
+      visit:
+        location: 拠点
+        checked_in_at: チェックイン時刻
   errors:
     format: "%{attribute}%{message}"
     messages:
@@ -30,3 +43,4 @@ ja:
       inclusion: は一覧から選択してください
       confirmation: が一致しません
       not_an_integer: は整数で入力してください
+      in: は%{count}の範囲で入力してください

@@ -24,7 +24,24 @@ FactoryBot.define do
     end
   end
 
+  factory :location do
+    sequence(:name) { |n| "拠点#{n}" }
+    prefecture { "東京都" }
+    address { "渋谷区1-1" }
+    open_hour { 9 }
+    close_hour { 21 }
+    hourly_price { 300 }
+    daily_max_price { 1500 }
+  end
+
+  factory :visit do
+    user
+    location
+    checked_in_at { Time.current.change(hour: 10) }
+  end
+
   factory :space do
+    location
     sequence(:name) { |n| "席#{n}" }
     kind { :seat }
     capacity { 1 }

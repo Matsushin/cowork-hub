@@ -1,7 +1,7 @@
 variable "project" {
   description = "リソース名の接頭辞"
   type        = string
-  default     = "coworking-sample"
+  default     = "cowork-hub"
 }
 
 variable "region" {

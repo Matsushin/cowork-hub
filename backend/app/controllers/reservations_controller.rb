@@ -1,6 +1,6 @@
 class ReservationsController < ApplicationController
   def index
-    scope = current_user.reservations.includes(:space)
+    scope = current_user.reservations.includes(space: :location)
     # 今後の予約は近い順、すべて表示のときは新しい順
     scope = if params[:upcoming] == "true"
       scope.upcoming.confirmed.order(starts_at: :asc)

@@ -32,8 +32,8 @@ resource "aws_db_instance" "main" {
   storage_type          = "gp3"
   storage_encrypted     = true
 
-  db_name  = "coworking_production"
-  username = "coworking"
+  db_name  = "cowork_hub_production"
+  username = "coworkhub"
   # パスワードはRDSがSecrets Managerで自動生成・管理する
   manage_master_user_password = true
 

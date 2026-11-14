@@ -12,7 +12,12 @@ export async function updateUser(id: number, _prev: ActionState, formData: FormD
   const result = await tryApi(() =>
     apiFetch(`/admin/users/${id}`, {
       method: "PATCH",
-      body: { user: { role: formData.get("role"), ...(planId ? { plan_id: planId } : {}) } },
+      body: {
+        user: {
+          role: formData.get("role"),
+          ...(planId ? { plan_id: planId } : {}),
+        },
+      },
     }),
   );
   if (!result.ok) return result.state;
@@ -21,11 +26,41 @@ export async function updateUser(id: number, _prev: ActionState, formData: FormD
   return success("保存しました");
 }
 
+export async function createLocation(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const keys = ["name", "prefecture", "address", "description", "open_hour", "close_hour", "hourly_price", "daily_max_price"];
+  const result = await tryApi(() =>
+    apiFetch("/admin/locations", {
+      method: "POST",
+      body: {
+        location: Object.fromEntries(keys.map((k) => [k, formData.get(k)])),
+      },
+    }),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath("/admin/locations");
+  return success();
+}
+
+export async function setLocationActive(id: number, active: boolean): Promise<ActionState> {
+  const result = await tryApi(() =>
+    apiFetch(`/admin/locations/${id}`, {
+      method: "PATCH",
+      body: { location: { active } },
+    }),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath("/admin/locations");
+  return success();
+}
+
 export async function createSpace(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const keys = ["location_id", "name", "kind", "capacity", "hourly_price"];
   const result = await tryApi(() =>
     apiFetch("/admin/spaces", {
       method: "POST",
-      body: { space: { name: formData.get("name"), kind: formData.get("kind"), capacity: formData.get("capacity") } },
+      body: {
+        space: Object.fromEntries(keys.map((k) => [k, formData.get(k)])),
+      },
     }),
   );
   if (!result.ok) return result.state;
@@ -34,7 +69,12 @@ export async function createSpace(_prev: ActionState, formData: FormData): Promi
 }
 
 export async function setSpaceActive(id: number, active: boolean): Promise<ActionState> {
-  const result = await tryApi(() => apiFetch(`/admin/spaces/${id}`, { method: "PATCH", body: { space: { active } } }));
+  const result = await tryApi(() =>
+    apiFetch(`/admin/spaces/${id}`, {
+      method: "PATCH",
+      body: { space: { active } },
+    }),
+  );
   if (!result.ok) return result.state;
   revalidatePath("/admin/spaces");
   return success();

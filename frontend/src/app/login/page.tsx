@@ -3,6 +3,6 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { getCurrentUser } from "@/lib/server/session";
 
 export default async function LoginPage() {
-  if (await getCurrentUser()) redirect("/reserve");
+  if (await getCurrentUser()) redirect("/locations");
   return <LoginForm />;
 }

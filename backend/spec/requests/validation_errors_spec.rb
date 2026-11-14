@@ -31,7 +31,7 @@ RSpec.describe "バリデーションエラーの形式", type: :request do
 
   it "不正な種別のスペースは422で kind のエラーを返す" do
     admin = create(:user, :admin)
-    post "/api/admin/spaces", headers: auth_headers(admin), params: { space: { name: "", kind: "garden", capacity: 0 } }
+    post "/api/admin/spaces", headers: auth_headers(admin), params: { space: { location_id: create(:location).id, name: "", kind: "garden", capacity: 0 } }
     expect(response).to have_http_status(:unprocessable_content)
     expect(json["errors"].keys).to contain_exactly("name", "kind", "capacity")
   end
