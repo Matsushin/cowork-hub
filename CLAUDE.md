@@ -23,7 +23,10 @@
 - 認証トークンは httpOnly Cookie（`lib/server/session.ts`）。ページの認可は `requireUser` / `requireAdmin`
   - `src/middleware.ts` はCookieの有無だけを見て、未ログインならページ描画前に `/login?next=...` へ送る（最終確認は requireUser と Rails）。
     ログインが必要なページを増やしたら `config.matcher` にも追加する
-- フォームは `useActionForm` ＋ `<FormErrors>` ＋ `<Field>`（子要素の name でその項目のエラーを表示）。
+- フォームは `useActionForm(action, { schema, defaultValues })` ＋ `<FormErrors>` ＋ `<Field>`（React Hook Form＋Zod）。
+  `<Field>` は子要素の name でReact Hook Formに登録し、その項目のエラー（ブラウザのチェック → Railsのエラー）を表示する。
+  初期値は `<Input defaultValue>` ではなく `defaultValues` で渡す。
+  スキーマは `lib/schemas.ts` に置き、Server Action側でも `parseInput` で同じスキーマを使って検証してからRailsへ送る。
   1クリックの操作は `ActionButton` に `.bind(null, id)` したServer Actionを渡す
 - 日時の表示は `lib/format.ts` を使う（サーバーはUTCなので、日本時間を明示している）
 - ドメインの関係：拠点（Location）→ スペース（Space）→ 予約（Reservation）。ドロップイン利用は Visit（会員×拠点）

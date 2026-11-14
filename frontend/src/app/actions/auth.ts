@@ -4,22 +4,22 @@ import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/api-error";
 import type { User } from "@/lib/types";
 import { safeRedirectPath } from "@/lib/session-cookie";
-import { tryApi } from "@/lib/server/action";
+import { loginSchema, signupSchema } from "@/lib/schemas";
+import { parseInput, tryApi } from "@/lib/server/action";
 import { apiFetch } from "@/lib/server/api";
 import { clearSessionToken, setSessionToken } from "@/lib/server/session";
 
 type SessionResponse = { token: string; user: User };
 
 export async function login(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const input = parseInput(loginSchema, formData);
+  if (!input.ok) return input.state;
   const result = await tryApi(
     () =>
       apiFetch<SessionResponse>("/session", {
         method: "POST",
         auth: false,
-        body: {
-          email_address: formData.get("email_address"),
-          password: formData.get("password"),
-        },
+        body: input.data,
       }),
     { redirectOnUnauthorized: false }, // 401は「メールアドレスまたはパスワードが違う」として表示する
   );
@@ -30,17 +30,13 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
 }
 
 export async function signup(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const input = parseInput(signupSchema, formData);
+  if (!input.ok) return input.state;
   const result = await tryApi(() =>
     apiFetch<SessionResponse>("/signup", {
       method: "POST",
       auth: false,
-      body: {
-        user: {
-          name: formData.get("name"),
-          email_address: formData.get("email_address"),
-          password: formData.get("password"),
-        },
-      },
+      body: { user: input.data },
     }),
   );
   if (!result.ok) return result.state;
