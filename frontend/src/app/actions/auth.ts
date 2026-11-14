@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/api-error";
 import type { User } from "@/lib/types";
+import { safeRedirectPath } from "@/lib/session-cookie";
 import { tryApi } from "@/lib/server/action";
 import { apiFetch } from "@/lib/server/api";
 import { clearSessionToken, setSessionToken } from "@/lib/server/session";
@@ -24,7 +25,8 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   );
   if (!result.ok) return result.state;
   await setSessionToken(result.data.token);
-  redirect("/locations");
+  // middleware が付けた ?next= の画面へ戻る（外部URLは safeRedirectPath で弾く）
+  redirect(safeRedirectPath(formData.get("next")));
 }
 
 export async function signup(_prev: ActionState, formData: FormData): Promise<ActionState> {

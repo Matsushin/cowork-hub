@@ -21,6 +21,8 @@
 - フロントのデータ取得は Server Components（`lib/server/api.ts` の `apiFetch`）、更新は Server Actions（`app/actions/`）で行う。
   ブラウザからRails APIを直接呼ばない。クライアントコンポーネントは操作が必要な部分だけにする
 - 認証トークンは httpOnly Cookie（`lib/server/session.ts`）。ページの認可は `requireUser` / `requireAdmin`
+  - `src/middleware.ts` はCookieの有無だけを見て、未ログインならページ描画前に `/login?next=...` へ送る（最終確認は requireUser と Rails）。
+    ログインが必要なページを増やしたら `config.matcher` にも追加する
 - フォームは `useActionForm` ＋ `<FormErrors>` ＋ `<Field>`（子要素の name でその項目のエラーを表示）。
   1クリックの操作は `ActionButton` に `.bind(null, id)` したServer Actionを渡す
 - 日時の表示は `lib/format.ts` を使う（サーバーはUTCなので、日本時間を明示している）

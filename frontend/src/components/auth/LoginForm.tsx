@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next: string }) {
   const { state, pending, onSubmit } = useActionForm(login);
 
   return (
@@ -17,6 +17,7 @@ export function LoginForm() {
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         {/* どの項目が誤りかは教えない（アカウントの存在を推測されないため） */}
         <ErrorMessage message={state.message} />
+        <input type="hidden" name="next" value={next} />
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email_address">メールアドレス</Label>
           <Input id="email_address" name="email_address" type="email" autoComplete="email" />
