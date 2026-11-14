@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, formatDateTime, formatTime } from "@/lib/api";
 import type { Reservation } from "@/lib/types";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -14,8 +14,19 @@ function ReservationsInner() {
   const [error, setError] = useState<string | null>(null);
   const [upcomingOnly, setUpcomingOnly] = useState(true);
 
+  // 切り替えや再読み込みで古くなったリクエストの応答は破棄する
+  const requestId = useRef(0);
+
   const load = useCallback(() => {
-    api<Reservation[]>(`/reservations${upcomingOnly ? "?upcoming=true" : ""}`).then(setItems).catch((e) => setError(e.message));
+    const id = ++requestId.current;
+    setError(null);
+    api<Reservation[]>(`/reservations${upcomingOnly ? "?upcoming=true" : ""}`)
+      .then((data) => {
+        if (id === requestId.current) setItems(data);
+      })
+      .catch((e) => {
+        if (id === requestId.current) setError(e.message);
+      });
   }, [upcomingOnly]);
 
   useEffect(load, [load]);
