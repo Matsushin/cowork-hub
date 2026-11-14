@@ -6,7 +6,7 @@ import type { Plan, Reservation, User } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { Field, ErrorMessage } from "@/components/form";
+import { ErrorMessage, Field, FormErrors, useApiErrors } from "@/components/form";
 
 type UserDetail = User & { reservations: Reservation[] };
 
@@ -16,7 +16,8 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [planId, setPlanId] = useState("");
   const [role, setRole] = useState("member");
-  const [error, setError] = useState<string | null>(null);
+  const errors = useApiErrors();
+  const handleError = errors.handle;
   const [saved, setSaved] = useState(false);
 
   const load = useCallback(async () => {
@@ -27,27 +28,27 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
       setPlanId(String(u.plan?.id ?? ""));
       setRole(u.role);
     } catch (e) {
-      setError((e as Error).message);
+      handleError(e);
     }
-  }, [id]);
+  }, [id, handleError]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const save = async () => {
-    setError(null);
+    errors.clear();
     setSaved(false);
     try {
       await api(`/admin/users/${id}`, { method: "PATCH", body: { user: { role, plan_id: planId || undefined } } });
       await load();
       setSaved(true);
     } catch (e) {
-      setError((e as Error).message);
+      errors.handle(e);
     }
   };
 
-  if (!user) return <ErrorMessage message={error} />;
+  if (!user) return <ErrorMessage message={errors.message} />;
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
@@ -57,9 +58,10 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
           <p className="text-sm text-muted-foreground">{user.email_address}</p>
           <p className="text-xs text-muted-foreground">登録日：{new Date(user.created_at).toLocaleDateString("ja-JP")}</p>
         </div>
-        <ErrorMessage message={error} />
+        <ErrorMessage message={errors.message} />
+        <FormErrors value={errors}>
         {saved && <p className="text-sm text-primary">保存しました</p>}
-        <Field label="プラン">
+        <Field label="プラン" name="plan">
           <NativeSelect value={planId} onChange={(e) => setPlanId(e.target.value)}>
             <NativeSelectOption value="">未設定</NativeSelectOption>
             {plans.map((p) => (
@@ -67,12 +69,13 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
             ))}
           </NativeSelect>
         </Field>
-        <Field label="権限">
+        <Field label="権限" name="role">
           <NativeSelect value={role} onChange={(e) => setRole(e.target.value)}>
             <NativeSelectOption value="member">会員</NativeSelectOption>
             <NativeSelectOption value="admin">管理者</NativeSelectOption>
           </NativeSelect>
         </Field>
+        </FormErrors>
         <Button onClick={save}>保存する</Button>
       </Card>
       <Card className="px-5">

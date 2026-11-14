@@ -5,6 +5,7 @@ ja:
         email_address: メールアドレス
         name: 名前
         password: パスワード
+        role: 権限
       reservation:
         starts_at: 開始時刻
         ends_at: 終了時刻
@@ -12,6 +13,7 @@ ja:
       space:
         name: 名前
         capacity: 定員
+        kind: 種別
   errors:
     format: "%{attribute}%{message}"
     messages:
@@ -25,3 +27,6 @@ ja:
       required: を入力してください
       restrict_dependent_destroy:
         has_many: "%{record}が存在するため削除できません"
+      inclusion: は一覧から選択してください
+      confirmation: が一致しません
+      not_an_integer: は整数で入力してください

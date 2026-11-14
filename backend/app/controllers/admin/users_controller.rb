@@ -20,8 +20,6 @@ module Admin
         user.change_plan!(Plan.find(attrs[:plan_id])) if attrs[:plan_id].present? && attrs[:plan_id].to_i != user.current_plan&.id
       end
       render json: UserSerializer.call(user.reload)
-    rescue ArgumentError => e
-      render json: { error: e.message }, status: :unprocessable_content
     end
   end
 end

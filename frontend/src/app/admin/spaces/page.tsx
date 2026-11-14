@@ -7,27 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { Field, ErrorMessage } from "@/components/form";
+import { ErrorMessage, Field, FormErrors, useApiErrors } from "@/components/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function AdminSpacesPage() {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [form, setForm] = useState({ name: "", kind: "seat", capacity: 1 });
-  const [error, setError] = useState<string | null>(null);
+  const errors = useApiErrors();
+  const handleError = errors.handle;
 
   const load = useCallback(() => {
-    api<Space[]>("/admin/spaces").then(setSpaces).catch((e) => setError(e.message));
-  }, []);
+    api<Space[]>("/admin/spaces").then(setSpaces).catch(handleError);
+  }, [handleError]);
 
   useEffect(load, [load]);
 
   const run = async (fn: () => Promise<unknown>) => {
-    setError(null);
+    errors.clear();
     try {
       await fn();
       load();
     } catch (e) {
-      setError((e as Error).message);
+      errors.handle(e);
     }
   };
 
@@ -41,28 +42,30 @@ export default function AdminSpacesPage() {
 
   return (
     <div className="space-y-6">
-      <ErrorMessage message={error} />
+      <ErrorMessage message={errors.message} />
       <Card className="px-5">
         <h2 className="mb-3 font-semibold">スペースを追加</h2>
-        <form onSubmit={create} className="flex flex-wrap items-end gap-3">
+        <FormErrors value={errors}>
+        <form onSubmit={create} className="flex flex-wrap items-start gap-3" noValidate>
           <div className="min-w-48 flex-1">
-            <Field label="名前">
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+            <Field label="名前" name="name">
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
           </div>
-          <Field label="種別">
+          <Field label="種別" name="kind">
             <NativeSelect value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
               <NativeSelectOption value="seat">フリー席</NativeSelectOption>
               <NativeSelectOption value="meeting_room">会議室</NativeSelectOption>
             </NativeSelect>
           </Field>
-          <div className="w-24">
-            <Field label="定員">
+          <div className="w-36">
+            <Field label="定員" name="capacity">
               <Input type="number" min={1} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: Number(e.target.value) })} />
             </Field>
           </div>
-          <Button type="submit">追加</Button>
+          <Button type="submit" className="mt-5">追加</Button>
         </form>
+        </FormErrors>
       </Card>
       <Card className="px-5 overflow-x-auto p-0">
         <Table>

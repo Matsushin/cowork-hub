@@ -4,7 +4,7 @@ class User < ApplicationRecord
   has_many :memberships, dependent: :destroy
   has_many :reservations, dependent: :destroy
 
-  enum :role, { member: 0, admin: 1 }
+  enum :role, { member: 0, admin: 1 }, validate: true
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 

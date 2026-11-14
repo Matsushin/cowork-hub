@@ -20,7 +20,7 @@ module Admin
       if space.destroy
         head :no_content
       else
-        render json: { error: space.errors.full_messages.join("、") }, status: :unprocessable_content
+        render_validation_errors(space)
       end
     end
 
