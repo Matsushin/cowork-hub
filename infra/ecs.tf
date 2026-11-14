@@ -145,6 +145,12 @@ resource "aws_ecs_task_definition" "frontend" {
     image        = "${aws_ecr_repository.app["frontend"].repository_url}:${var.image_tag}"
     essential    = true
     portMappings = [{ containerPort = 3000, protocol = "tcp" }]
+    environment = [
+      # Server Components / Server Actions からRails APIを呼ぶ接続先（ALB経由で /api/* がRailsに届く）
+      { name = "API_ORIGIN", value = "http://${aws_lb.main.dns_name}" },
+      # HTTPS化したら "true" にしてCookieにSecure属性を付ける
+      { name = "COOKIE_SECURE", value = "false" },
+    ]
     logConfiguration = {
       logDriver = "awslogs"
       options = {

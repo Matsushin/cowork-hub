@@ -1,33 +1,20 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import type { User } from "@/lib/types";
+import { SearchParamInput } from "@/components/admin/SearchParamInput";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ErrorMessage } from "@/components/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { apiFetch } from "@/lib/server/api";
+import type { User } from "@/lib/types";
 
-export default function AdminUsersPage() {
-  const [q, setQ] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      api<User[]>(`/admin/users?q=${encodeURIComponent(q)}`).then(setUsers).catch((e) => setError(e.message));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [q]);
+export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q = "" } = await searchParams;
+  const users = await apiFetch<User[]>(`/admin/users?q=${encodeURIComponent(q)}`);
 
   return (
     <div className="space-y-4">
       <div className="max-w-sm">
-        <Input placeholder="名前・メールアドレスで検索" value={q} onChange={(e) => setQ(e.target.value)} />
+        <SearchParamInput param="q" delay={300} placeholder="名前・メールアドレスで検索" aria-label="会員を検索" />
       </div>
-      <ErrorMessage message={error} />
-      <Card className="px-5 overflow-x-auto p-0">
+      <Card className="overflow-x-auto p-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -41,7 +28,9 @@ export default function AdminUsersPage() {
             {users.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="px-4">
-                  <Link href={`/admin/users/${u.id}`} className="text-primary hover:underline">{u.name}</Link>
+                  <Link href={`/admin/users/${u.id}`} className="text-primary hover:underline">
+                    {u.name}
+                  </Link>
                 </TableCell>
                 <TableCell className="px-4 text-muted-foreground">{u.email_address}</TableCell>
                 <TableCell className="px-4">{u.plan?.name ?? "—"}</TableCell>
@@ -50,6 +39,7 @@ export default function AdminUsersPage() {
             ))}
           </TableBody>
         </Table>
+        {users.length === 0 && <p className="p-4 text-sm text-muted-foreground">該当する会員はいません。</p>}
       </Card>
     </div>
   );

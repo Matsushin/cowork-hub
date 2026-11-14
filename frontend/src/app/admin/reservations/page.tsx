@@ -1,34 +1,29 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { api, formatDateTime, formatTime } from "@/lib/api";
-import type { Reservation } from "@/lib/types";
+import Link from "next/link";
+import { SearchParamInput } from "@/components/admin/SearchParamInput";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ErrorMessage } from "@/components/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDateTime, formatTime, isValidDate } from "@/lib/format";
+import { apiFetch } from "@/lib/server/api";
+import type { Reservation } from "@/lib/types";
 
-export default function AdminReservationsPage() {
-  const [date, setDate] = useState("");
-  const [items, setItems] = useState<Reservation[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api<Reservation[]>(`/admin/reservations${date ? `?date=${date}` : ""}`).then(setItems).catch((e) => setError(e.message));
-  }, [date]);
+export default async function AdminReservationsPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+  const { date } = await searchParams;
+  const filtered = isValidDate(date);
+  const items = await apiFetch<Reservation[]>(`/admin/reservations${filtered ? `?date=${date}` : ""}`);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="w-44">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <SearchParamInput param="date" type="date" aria-label="日付で絞り込み" />
         </div>
-        {date && (
-          <button onClick={() => setDate("")} className="text-sm text-muted-foreground underline">すべて表示</button>
+        {filtered && (
+          <Link href="/admin/reservations" className="text-sm text-muted-foreground underline">
+            すべて表示
+          </Link>
         )}
       </div>
-      <ErrorMessage message={error} />
-      <Card className="px-5 overflow-x-auto p-0">
+      <Card className="overflow-x-auto p-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -41,7 +36,9 @@ export default function AdminReservationsPage() {
           <TableBody>
             {items.map((r) => (
               <TableRow key={r.id}>
-                <TableCell className="px-4">{formatDateTime(r.starts_at)}〜{formatTime(r.ends_at)}</TableCell>
+                <TableCell className="px-4">
+                  {formatDateTime(r.starts_at)}〜{formatTime(r.ends_at)}
+                </TableCell>
                 <TableCell className="px-4">{r.space.name}</TableCell>
                 <TableCell className="px-4">{r.user?.name}</TableCell>
                 <TableCell className="px-4 text-muted-foreground">{r.status === "canceled" ? "キャンセル" : "確定"}</TableCell>

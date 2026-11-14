@@ -16,8 +16,13 @@
 ## 実装の約束ごと
 - APIはすべて `/api` 配下。本番ではALBが `/api/*` をRailsへ振り分ける
 - 認証は `Authorization: Bearer <token>`（Sessionモデルのトークン）
-- バリデーションエラーは422で `{ error, errors: { 項目名: [メッセージ] } }` を返す。
-  フロントは `useApiErrors` と `<Field name="...">` で項目ごとに表示する
+- バリデーションエラーは422で `{ error, errors: { 項目名: [メッセージ] } }` を返す
+- フロントのデータ取得は Server Components（`lib/server/api.ts` の `apiFetch`）、更新は Server Actions（`app/actions/`）で行う。
+  ブラウザからRails APIを直接呼ばない。クライアントコンポーネントは操作が必要な部分だけにする
+- 認証トークンは httpOnly Cookie（`lib/server/session.ts`）。ページの認可は `requireUser` / `requireAdmin`
+- フォームは `useActionForm` ＋ `<FormErrors>` ＋ `<Field>`（子要素の name でその項目のエラーを表示）。
+  1クリックの操作は `ActionButton` に `.bind(null, id)` したServer Actionを渡す
+- 日時の表示は `lib/format.ts` を使う（サーバーはUTCなので、日本時間を明示している）
 - 予約の重複防止は `Reservation.reserve!` でスペース行をロックしてから確認する
 - 画面の文言・エラーメッセージは日本語。UIはshadcn/uiのコンポーネントを使う
 - 秘密情報はコミットしない（本番はSSM / Secrets Manager経由）

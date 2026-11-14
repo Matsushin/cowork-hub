@@ -1,92 +1,69 @@
-"use client";
-
-import { useCallback, useEffect, useRef, useState } from "react";
-import { api, formatDateTime, formatTime } from "@/lib/api";
-import type { Reservation } from "@/lib/types";
-import { RequireAuth } from "@/components/RequireAuth";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ErrorMessage } from "@/components/form";
+import Link from "next/link";
+import { cancelReservation } from "@/app/actions/member";
+import { ActionButton } from "@/components/form";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { formatDateTime, formatTime } from "@/lib/format";
+import { apiFetch } from "@/lib/server/api";
+import { requireUser } from "@/lib/server/session";
+import type { Reservation } from "@/lib/types";
 
-function ReservationsInner() {
-  const [items, setItems] = useState<Reservation[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [upcomingOnly, setUpcomingOnly] = useState(true);
-
-  // 切り替えや再読み込みで古くなったリクエストの応答は破棄する
-  const requestId = useRef(0);
-
-  const load = useCallback(() => {
-    const id = ++requestId.current;
-    setError(null);
-    api<Reservation[]>(`/reservations${upcomingOnly ? "?upcoming=true" : ""}`)
-      .then((data) => {
-        if (id === requestId.current) setItems(data);
-      })
-      .catch((e) => {
-        if (id === requestId.current) setError(e.message);
-      });
-  }, [upcomingOnly]);
-
-  useEffect(load, [load]);
-
-  const cancel = async (r: Reservation) => {
-    if (!confirm(`${r.space.name} ${formatDateTime(r.starts_at)} の予約をキャンセルしますか？`)) return;
-    try {
-      await api(`/reservations/${r.id}/cancel`, { method: "PATCH" });
-      load();
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
+export default async function ReservationsPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+  await requireUser();
+  // 表示の切り替えはURL（?filter=all）で持つ。リロードやブックマークでも状態が残る
+  const upcomingOnly = (await searchParams).filter !== "all";
+  const items = await apiFetch<Reservation[]>(`/reservations${upcomingOnly ? "?upcoming=true" : ""}`);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">予約一覧</h1>
         <div className="flex gap-1" role="group" aria-label="表示する予約">
-          <Button size="sm" variant={upcomingOnly ? "default" : "outline"} aria-pressed={upcomingOnly} onClick={() => setUpcomingOnly(true)}>
+          <Link
+            href="/reservations"
+            aria-current={upcomingOnly ? "page" : undefined}
+            className={buttonVariants({ size: "sm", variant: upcomingOnly ? "default" : "outline" })}
+          >
             今後の予約
-          </Button>
-          <Button size="sm" variant={upcomingOnly ? "outline" : "default"} aria-pressed={!upcomingOnly} onClick={() => setUpcomingOnly(false)}>
+          </Link>
+          <Link
+            href="/reservations?filter=all"
+            aria-current={upcomingOnly ? undefined : "page"}
+            className={buttonVariants({ size: "sm", variant: upcomingOnly ? "outline" : "default" })}
+          >
             すべて
-          </Button>
+          </Link>
         </div>
       </div>
-      <ErrorMessage message={error} />
       {items.length === 0 && (
         <p className="text-sm text-muted-foreground">{upcomingOnly ? "今後の予約はありません。" : "予約はまだありません。"}</p>
       )}
       <div className="space-y-2">
         {items.map((r) => (
-          <Card key={r.id} className="px-5 flex flex-row flex-wrap items-center justify-between gap-3 py-4">
+          <Card key={r.id} className="flex flex-row flex-wrap items-center justify-between gap-3 px-5 py-4">
             <div>
               <p className="font-medium">
                 {formatDateTime(r.starts_at)}〜{formatTime(r.ends_at)}
               </p>
               <p className="text-sm text-muted-foreground">{r.space.name}</p>
             </div>
-            <div className="flex items-center gap-3">
-              {r.status === "canceled" ? (
-                <Badge variant="secondary">キャンセル済み</Badge>
-              ) : r.cancelable ? (
-                <Button variant="destructive" onClick={() => cancel(r)}>キャンセル</Button>
-              ) : (
-                <Badge variant="secondary">利用済み</Badge>
-              )}
-            </div>
+            {r.status === "canceled" ? (
+              <Badge variant="secondary">キャンセル済み</Badge>
+            ) : r.cancelable ? (
+              <ActionButton
+                variant="destructive"
+                action={cancelReservation.bind(null, r.id)}
+                confirmMessage={`${r.space.name} ${formatDateTime(r.starts_at)} の予約をキャンセルしますか？`}
+              >
+                キャンセル
+              </ActionButton>
+            ) : (
+              <Badge variant="secondary">利用済み</Badge>
+            )}
           </Card>
         ))}
       </div>
     </div>
-  );
-}
-
-export default function ReservationsPage() {
-  return (
-    <RequireAuth>
-      <ReservationsInner />
-    </RequireAuth>
   );
 }
