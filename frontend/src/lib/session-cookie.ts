@@ -1,5 +1,5 @@
 // セッションCookieの名前とログイン後の戻り先の扱い
-// middleware（Edge Runtime）からも読むので、server-only や next/headers に依存させない
+// proxy.ts からも読むので、server-only や next/headers に依存させない
 
 export const SESSION_COOKIE_NAME = "session_token";
 

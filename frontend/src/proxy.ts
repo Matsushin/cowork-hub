@@ -3,13 +3,14 @@ import { SESSION_COOKIE_NAME } from "@/lib/session-cookie";
 
 /**
  * ログインが必要なページに、セッションCookieを持たずに来たらログイン画面へ送る
+ * （Next.js 16 で middleware.ts から proxy.ts に改名された。Node.js ランタイムで動く）
  *
  * ここで見るのは「Cookieがあるか」だけ（Rails APIへの問い合わせはしない）。
  * トークンが有効か・管理者かの最終確認は、各ページの requireUser / requireAdmin と Rails 側で行う。
  * ページの描画やAPI呼び出しの前に弾けるので、未ログイン時の無駄な処理がなくなり、
  * ログイン後に元のページへ戻れる（?next=）。
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.cookies.has(SESSION_COOKIE_NAME)) return NextResponse.next();
 
   const { pathname, search } = request.nextUrl;

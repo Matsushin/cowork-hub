@@ -23,7 +23,7 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   );
   if (!result.ok) return result.state;
   await setSessionToken(result.data.token);
-  // middleware が付けた ?next= の画面へ戻る（外部URLは safeRedirectPath で弾く）
+  // proxy が付けた ?next= の画面へ戻る（外部URLは safeRedirectPath で弾く）
   redirect(safeRedirectPath(formData.get("next")));
 }
 
