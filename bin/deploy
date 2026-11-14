@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# イメージをビルドしてECRにpushし、ECSサービスを更新する
+#   使い方: bin/deploy [backend|frontend|all]
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+TARGET="${1:-all}"
+REGION="$(terraform -chdir=infra output -raw region 2>/dev/null || echo ap-northeast-1)"
+CLUSTER="$(terraform -chdir=infra output -raw cluster_name)"
+TAG="$(git rev-parse --short HEAD)"
+REGISTRY="$(terraform -chdir=infra output -json ecr_repository_urls | jq -r '.backend' | cut -d/ -f1)"
+
+aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+
+for app in backend frontend; do
+  [[ "$TARGET" == "all" || "$TARGET" == "$app" ]] || continue
+  repo="$(terraform -chdir=infra output -json ecr_repository_urls | jq -r ".$app")"
+  echo "==> $app: build & push ($TAG)"
+  docker build --platform linux/arm64 -t "$repo:$TAG" -t "$repo:latest" "$app"
+  docker push "$repo:$TAG"
+  docker push "$repo:latest"
+  echo "==> $app: ECSサービスを更新"
+  aws ecs update-service --region "$REGION" --cluster "$CLUSTER" --service "$app" --force-new-deployment >/dev/null
+done
+
+echo "==> 反映待ち（数分かかります）"
+aws ecs wait services-stable --region "$REGION" --cluster "$CLUSTER" --services backend frontend
+echo "完了: $(terraform -chdir=infra output -raw app_url)"

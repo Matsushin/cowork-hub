@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# 本番DBに初期データ（プラン・スペース・管理者）を投入する単発タスクを実行する
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+CLUSTER="$(terraform -chdir=infra output -raw cluster_name)"
+NETWORK="$(terraform -chdir=infra output -json backend_network)"
+SUBNETS="$(jq -r '.subnets | join(",")' <<<"$NETWORK")"
+SGS="$(jq -r '.security_groups | join(",")' <<<"$NETWORK")"
+
+TASK_ARN="$(aws ecs run-task --cluster "$CLUSTER" --launch-type FARGATE \
+  --task-definition coworking-sample-backend \
+  --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SGS],assignPublicIp=ENABLED}" \
+  --overrides '{"containerOverrides":[{"name":"backend","command":["./bin/rails","db:prepare","db:seed"]}]}' \
+  --query 'tasks[0].taskArn' --output text)"
+
+echo "seedタスクを実行中: $TASK_ARN"
+aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"
+aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --query 'tasks[0].containers[0].exitCode' --output text
