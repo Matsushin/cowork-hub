@@ -84,6 +84,20 @@ terraform -chdir=infra apply -var desired_count=0   # タスクだけ停止（AL
 terraform -chdir=infra destroy                      # すべて削除（データも消えます）
 ```
 
+## Claude Codeによるコードレビュー
+
+[Claude Code GitHub Action](https://github.com/anthropics/claude-code-action) を使っています。
+
+| ワークフロー | 動くタイミング | 内容 |
+|---|---|---|
+| `claude-review.yml` | PRの作成・更新時 | 変更をレビューし、該当行へのコメントと総評を日本語で投稿する |
+| `claude.yml` | PR・Issueのコメントに `@claude` と書いたとき | 質問に答えたり、修正してコミットしたりする |
+
+- レビューの観点とプロジェクトの規約は `CLAUDE.md` に書いています
+- 指摘には重要度（【必須】【推奨】【参考】）を付けます
+- `@claude` に反応するのは、オーナー・メンバー・コラボレーターのコメントだけです
+- ドラフトPRとフォークからのPRは自動レビューの対象外です
+
 ## 学習用として割り切っている点
 
 - HTTPSなし（独自ドメインを用意したら、ACM＋ALBの443リスナーを追加）
