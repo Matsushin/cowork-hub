@@ -39,6 +39,6 @@
 ## GitHub Actionsでの運用メモ
 - レビュー用・`@claude` 用のワークフローは、mainに入ってから有効になる（PR内で変更しても、そのPRでは動かない）
 - `@claude` のpushは専用GitHub Appのトークンで行うので、CIと自動レビューが起動する
-- ただし公開リポジトリでは、`@claude`（`github-actions[bot]` 名義）のpushで起動したワークフローは毎回承認待ちになる。
+- ただし公開リポジトリでは、`@claude` のコミット（作者は `github-actions[bot]`。pushはAppのトークン）で起動したワークフローは毎回承認待ちになる。
   PRの「Approve and run workflows」を押して実行する（ボットの変更を確認してから実行させる運用）
   - 承認設定の変更や、マージコミットでボットのコミットを残す方法では解消しなかった
