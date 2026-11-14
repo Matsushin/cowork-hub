@@ -45,6 +45,7 @@ describe("locationSchema", () => {
 
   it("空欄・範囲外・開店≧閉店をエラーにする", () => {
     expect(fieldErrors(locationSchema.safeParse({ ...valid, hourly_price: "" })).hourly_price).toEqual(["1時間料金を入力してください"]);
+    expect(fieldErrors(locationSchema.safeParse({ ...valid, hourly_price: "  " })).hourly_price).toEqual(["1時間料金を入力してください"]);
     expect(fieldErrors(locationSchema.safeParse({ ...valid, open_hour: "24" })).open_hour).toEqual(["開店時刻は23以下で入力してください"]);
     expect(fieldErrors(locationSchema.safeParse({ ...valid, open_hour: "21", close_hour: "9" })).close_hour).toEqual([
       "閉店時刻は開店時刻より後にしてください",

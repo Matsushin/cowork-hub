@@ -13,6 +13,8 @@ describe("safeRedirectPath", () => {
     ["バックスラッシュ", "/\\evil.example.com"],
     ["相対パス", "reservations"],
     ["空文字", ""],
+    ["タブを挟んだURL（ブラウザが // に解釈する）", "/\t/evil.example.com"],
+    ["改行を挟んだURL", "/\n/evil.example.com"],
   ])("%s は既定のパスにする", (_label, value) => {
     expect(safeRedirectPath(value)).toBe("/locations");
   });
