@@ -6,8 +6,9 @@ import { Field, FormErrors, FormStatus, useActionForm } from "@/components/form"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import type { Location } from "@/lib/types";
 
-export function SpaceCreateForm() {
+export function SpaceCreateForm({ locations }: { locations: Location[] }) {
   const { state, pending, onSubmit, errors } = useActionForm(createSpace);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -21,7 +22,17 @@ export function SpaceCreateForm() {
       <form ref={formRef} onSubmit={onSubmit} className="space-y-3" noValidate>
         <FormStatus state={state} />
         <div className="flex flex-wrap items-start gap-3">
-          <div className="min-w-48 flex-1">
+          <Field label="拠点" errorKey="location">
+            <NativeSelect name="location_id" defaultValue="">
+              <NativeSelectOption value="">選択してください</NativeSelectOption>
+              {locations.map((l) => (
+                <NativeSelectOption key={l.id} value={l.id}>
+                  {l.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </Field>
+          <div className="min-w-40 flex-1">
             <Field label="名前">
               <Input name="name" />
             </Field>
@@ -32,9 +43,14 @@ export function SpaceCreateForm() {
               <NativeSelectOption value="meeting_room">会議室</NativeSelectOption>
             </NativeSelect>
           </Field>
-          <div className="w-36">
+          <div className="w-24">
             <Field label="定員">
               <Input name="capacity" type="number" defaultValue={1} />
+            </Field>
+          </div>
+          <div className="w-32">
+            <Field label="1時間料金（円）">
+              <Input name="hourly_price" type="number" defaultValue={0} />
             </Field>
           </div>
           <Button type="submit" disabled={pending} className="mt-5">

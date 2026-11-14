@@ -25,7 +25,78 @@ RSpec.describe "管理者API", type: :request do
   end
 
   it "スペースを登録できる" do
-    post "/api/admin/spaces", params: { space: { name: "個室", kind: "meeting_room", capacity: 2 } }, headers: auth_headers(admin)
+    post "/api/admin/spaces", params: { space: { location_id: create(:location).id, name: "個室", kind: "meeting_room", capacity: 2 } }, headers: auth_headers(admin)
     expect(response).to have_http_status(:created)
+  end
+
+  it "スペースは拠点なしでは登録できない" do
+    post "/api/admin/spaces", params: { space: { name: "個室", kind: "meeting_room", capacity: 2 } }, headers: auth_headers(admin)
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(json["errors"].keys).to include "location"
+  end
+
+  describe "拠点" do
+    let(:params) do
+      { name: "梅田", prefecture: "大阪府", address: "大阪市北区1-1", open_hour: 8, close_hour: 22,
+        hourly_price: 400, daily_max_price: 2000 }
+    end
+
+    it "拠点を登録・停止できる" do
+      post "/api/admin/locations", params: { location: params }, headers: auth_headers(admin)
+      expect(response).to have_http_status(:created)
+      patch "/api/admin/locations/#{json['id']}", params: { location: { active: false } }, headers: auth_headers(admin)
+      expect(json["active"]).to be false
+      get "/api/locations"
+      expect(json).to be_empty
+    end
+
+    it "閉店が開店より前・不正な都道府県は422" do
+      post "/api/admin/locations", params: { location: params.merge(open_hour: 22, close_hour: 8, prefecture: "東京") },
+                                   headers: auth_headers(admin)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json["errors"].keys).to include("close_hour", "prefecture")
+    end
+
+    it "一般会員は登録できない" do
+      post "/api/admin/locations", params: { location: params }, headers: auth_headers(member)
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  describe "売上集計" do
+    let(:month) { Date.current.beginning_of_month }
+    let(:a) { create(:location, name: "A") }
+    let(:b) { create(:location, name: "B") }
+
+    def finished_visit(location:, at:, amount:)
+      create(:visit, location:, checked_in_at: at, checked_out_at: at + 1.hour, amount:)
+    end
+
+    before do
+      finished_visit(location: a, at: month.in_time_zone.change(hour: 10), amount: 600)
+      finished_visit(location: a, at: month.in_time_zone.change(hour: 14), amount: 300)
+      finished_visit(location: b, at: (month - 1.day).in_time_zone.change(hour: 10), amount: 999) # 先月
+      create(:visit, location: b, checked_in_at: month.in_time_zone.change(hour: 10)) # 利用中は含めない
+      room = create(:space, location: b, kind: :meeting_room, hourly_price: 1000)
+      build(:reservation, space: room, starts_at: month.in_time_zone.change(hour: 10), ends_at: month.in_time_zone.change(hour: 12), amount: 2000)
+        .save!(validate: false)
+      create(:user, plan: create(:plan, kind: :monthly, price: 8800))
+    end
+
+    it "拠点別のドロップイン・予約売上と月額プラン売上を返す" do
+      get "/api/admin/sales", params: { month: month.strftime("%Y-%m") }, headers: auth_headers(admin)
+      expect(response).to have_http_status(:ok)
+      rows = json["locations"].index_by { |r| r.dig("location", "name") }
+      expect(rows["A"]).to include("visit_count" => 2, "visit_amount" => 900, "reservation_amount" => 0)
+      expect(rows["B"]).to include("visit_count" => 0, "visit_amount" => 0, "reservation_amount" => 2000)
+      # adminとmemberのプラン（factoryの月額10000円）＋8800円
+      expect(json["plan_amount"]).to eq Membership.active_on(Date.current).joins(:plan).merge(Plan.monthly).sum("plans.price")
+      expect(json["total"]).to eq 900 + 2000 + json["plan_amount"]
+    end
+
+    it "月の形式が不正なら400" do
+      get "/api/admin/sales", params: { month: "2026/11" }, headers: auth_headers(admin)
+      expect(response).to have_http_status(:bad_request)
+    end
   end
 end

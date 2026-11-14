@@ -1,18 +1,19 @@
 module Admin
   class SpacesController < BaseController
     def index
-      render json: Space.order(:kind, :name).map { |r| SpaceSerializer.call(r) }
+      spaces = Space.includes(:location).order(:location_id, :kind, :name)
+      render json: spaces.map { |r| SpaceSerializer.call(r, with_location: true) }
     end
 
     def create
       space = Space.create!(space_params)
-      render json: SpaceSerializer.call(space), status: :created
+      render json: SpaceSerializer.call(space, with_location: true), status: :created
     end
 
     def update
       space = Space.find(params[:id])
       space.update!(space_params)
-      render json: SpaceSerializer.call(space)
+      render json: SpaceSerializer.call(space, with_location: true)
     end
 
     def destroy
@@ -27,7 +28,7 @@ module Admin
     private
 
     def space_params
-      params.expect(space: [ :name, :kind, :capacity, :active ])
+      params.expect(space: [ :location_id, :name, :kind, :capacity, :hourly_price, :active ])
     end
   end
 end

@@ -1,6 +1,4 @@
 class Reservation < ApplicationRecord
-  OPEN_HOUR = 9
-  CLOSE_HOUR = 21
   SLOT_MINUTES = 30
 
   class Conflict < StandardError; end
@@ -28,7 +26,9 @@ class Reservation < ApplicationRecord
       if space.reservations.confirmed.overlapping(starts_at, ends_at).exists?
         raise Conflict, "指定の時間帯はすでに予約されています"
       end
-      create!(user:, space:, starts_at:, ends_at:)
+      # 料金は予約時点のスペース料金で確定する（あとで料金を変えても過去の予約は変わらない）
+      amount = starts_at && ends_at ? (space.hourly_price * (ends_at - starts_at) / 3600.0).round : 0
+      create!(user:, space:, starts_at:, ends_at:, amount:)
     end
   end
 
@@ -52,12 +52,15 @@ class Reservation < ApplicationRecord
     errors.add(:ends_at, "は開始時刻より後にしてください") unless starts_at < ends_at
   end
 
+  # 営業時間は拠点ごとに異なる
   def within_business_hours
-    return if starts_at.blank? || ends_at.blank?
-    open = starts_at.change(hour: OPEN_HOUR)
-    close = starts_at.change(hour: CLOSE_HOUR)
-    errors.add(:base, "営業時間（#{OPEN_HOUR}:00〜#{CLOSE_HOUR}:00）内で予約してください") unless starts_at >= open && ends_at <= close
+    return if starts_at.blank? || ends_at.blank? || space.blank?
+    location = space.location
+    date = starts_at.in_time_zone.to_date
+    return if starts_at >= location.opens_at(date) && ends_at <= location.closes_at(date)
+    errors.add(:base, "営業時間（#{location.open_hour}:00〜#{location.close_hour}:00）内で予約してください")
   end
+
 
   def aligned_to_slots
     [ starts_at, ends_at ].compact.each do |t|
@@ -69,7 +72,7 @@ class Reservation < ApplicationRecord
   end
 
   def space_is_active
-    errors.add(:space, "は現在利用できません") if space && !space.active?
+    errors.add(:space, "は現在利用できません") if space && !(space.active? && space.location.active?)
   end
 
   def within_plan_limit

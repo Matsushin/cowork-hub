@@ -10,17 +10,21 @@ import { clearSessionToken, setSessionToken } from "@/lib/server/session";
 type SessionResponse = { token: string; user: User };
 
 export async function login(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const result = await tryApi(() =>
-    apiFetch<SessionResponse>("/session", {
-      method: "POST",
-      auth: false,
-      body: { email_address: formData.get("email_address"), password: formData.get("password") },
-    }),
+  const result = await tryApi(
+    () =>
+      apiFetch<SessionResponse>("/session", {
+        method: "POST",
+        auth: false,
+        body: {
+          email_address: formData.get("email_address"),
+          password: formData.get("password"),
+        },
+      }),
     { redirectOnUnauthorized: false }, // 401は「メールアドレスまたはパスワードが違う」として表示する
   );
   if (!result.ok) return result.state;
   await setSessionToken(result.data.token);
-  redirect("/reserve");
+  redirect("/locations");
 }
 
 export async function signup(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -29,13 +33,17 @@ export async function signup(_prev: ActionState, formData: FormData): Promise<Ac
       method: "POST",
       auth: false,
       body: {
-        user: { name: formData.get("name"), email_address: formData.get("email_address"), password: formData.get("password") },
+        user: {
+          name: formData.get("name"),
+          email_address: formData.get("email_address"),
+          password: formData.get("password"),
+        },
       },
     }),
   );
   if (!result.ok) return result.state;
   await setSessionToken(result.data.token);
-  redirect("/reserve");
+  redirect("/locations");
 }
 
 export async function logout() {

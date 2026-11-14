@@ -64,8 +64,49 @@ RSpec.describe "予約", type: :request do
 
   it "空き状況では他人の予約が mine=false で返る" do
     create(:reservation, space:, starts_at: tomorrow.in_time_zone.change(hour: 10), ends_at: tomorrow.in_time_zone.change(hour: 11))
-    get "/api/spaces/availability", params: { date: tomorrow.to_s }, headers: auth_headers(user)
+    get "/api/locations/#{space.location_id}/spaces/availability", params: { date: tomorrow.to_s }, headers: auth_headers(user)
     expect(json["reserved"].first).to include("space_id" => space.id, "mine" => false)
+  end
+
+  it "空き状況は指定した拠点のスペースだけを返し、営業時間は拠点のものを返す" do
+    other_location = create(:location, open_hour: 7, close_hour: 23)
+    other_space = create(:space, location: other_location)
+    create(:reservation, space:, starts_at: tomorrow.in_time_zone.change(hour: 10), ends_at: tomorrow.in_time_zone.change(hour: 11))
+    get "/api/locations/#{other_location.id}/spaces/availability", params: { date: tomorrow.to_s }, headers: auth_headers(user)
+    expect(json).to include("open_hour" => 7, "close_hour" => 23, "reserved" => [])
+    get "/api/locations/#{other_location.id}/spaces", headers: auth_headers(user)
+    expect(json.map { |s| s["id"] }).to eq [ other_space.id ]
+  end
+
+  describe "拠点ごとの営業時間・料金" do
+    let(:location) { create(:location, open_hour: 7, close_hour: 23) }
+    let(:space) { create(:space, location:, kind: :meeting_room, hourly_price: 1500) }
+
+    it "拠点の営業時間内なら早朝・深夜も予約でき、終了ちょうどの23時までは可" do
+      reserve(from: 7, to: 8)
+      expect(response).to have_http_status(:created)
+      reserve(from: 22, to: 23)
+      expect(response).to have_http_status(:created)
+    end
+
+    it "拠点の営業時間外は422" do
+      reserve(from: 6, to: 7)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json["error"]).to include "7:00〜23:00"
+    end
+
+    it "予約時のスペース料金×時間で金額を確定し、あとで料金を変えても変わらない" do
+      reserve(from: 10, to: 12)
+      expect(json["amount"]).to eq 3000
+      space.update!(hourly_price: 9999)
+      expect(Reservation.find(json["id"]).amount).to eq 3000
+    end
+
+    it "停止中の拠点のスペースは予約できない" do
+      location.update!(active: false)
+      reserve(from: 10, to: 12)
+      expect(response).to have_http_status(:not_found).or have_http_status(:unprocessable_content)
+    end
   end
 
   describe "予約一覧" do

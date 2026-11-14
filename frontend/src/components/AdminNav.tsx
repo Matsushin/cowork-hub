@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/admin/users", label: "会員" },
-  { href: "/admin/reservations", label: "予約" },
+  { href: "/admin/locations", label: "拠点" },
   { href: "/admin/spaces", label: "スペース" },
+  { href: "/admin/reservations", label: "予約" },
+  { href: "/admin/sales", label: "売上" },
 ];
 
 export function AdminNav() {

@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { spaceKindLabel } from "@/lib/format";
-import type { Availability, Space } from "@/lib/types";
+import { spaceKindLabel, yen } from "@/lib/format";
+import type { Availability, Location, Space } from "@/lib/types";
 
 type Selection = { spaceId: number; start: number; end: number } | null;
 
 type Props = {
+  location: Location;
   date: string;
   today: string;
   /** サーバーで描画した時刻。サーバーとブラウザで「過去の枠」の判定を揃えるために使う */
@@ -22,10 +23,15 @@ type Props = {
   availability: Availability;
 };
 
-const fmt = (ms: number) => new Date(ms).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" });
+const fmt = (ms: number) =>
+  new Date(ms).toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tokyo",
+  });
 
 // データはServer Componentで取得済み。ここでは枠の選択と予約の送信だけを行う
-export function ReserveGrid({ date, today, now, spaces, availability }: Props) {
+export function ReserveGrid({ location, date, today, now, spaces, availability }: Props) {
   const router = useRouter();
   const [selection, setSelection] = useState<Selection>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,12 +93,14 @@ export function ReserveGrid({ date, today, now, spaces, availability }: Props) {
   };
 
   const selectedSpace = spaces.find((s) => s.id === selection?.spaceId);
+  const selectedHours = selection ? ((selection.end - selection.start + 1) * slot_minutes) / 60 : 0;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">予約する</h1>
+          <p className="text-sm text-muted-foreground">{location.prefecture}</p>
+          <h1 className="text-2xl font-bold">{location.name}を予約する</h1>
           <p className="text-sm text-muted-foreground">空いている枠をクリックし、続けて終了したい枠をクリックしてください。</p>
         </div>
         <div className="w-44">
@@ -101,7 +109,7 @@ export function ReserveGrid({ date, today, now, spaces, availability }: Props) {
             aria-label="日付"
             value={date}
             min={today}
-            onChange={(e) => e.target.value && router.push(`/reserve?date=${e.target.value}`)}
+            onChange={(e) => e.target.value && router.push(`/locations/${location.id}/reserve?date=${e.target.value}`)}
           />
         </div>
       </div>
@@ -112,10 +120,17 @@ export function ReserveGrid({ date, today, now, spaces, availability }: Props) {
         <Table className="w-full border-collapse text-xs">
           <TableHeader>
             <TableRow>
-              <TableHead className="sticky left-0 z-10 min-w-36 bg-card px-3 py-2 text-left font-medium text-muted-foreground">スペース</TableHead>
+              <TableHead className="sticky left-0 z-10 min-w-36 bg-card px-3 py-2 text-left font-medium text-muted-foreground">
+                スペース
+              </TableHead>
               {slots.map((s, i) => (
                 <TableHead key={s} className="min-w-7 px-0 py-2 text-left font-normal text-muted-foreground">
-                  {i % 2 === 0 ? new Date(s).toLocaleTimeString("ja-JP", { hour: "numeric", timeZone: "Asia/Tokyo" }) : ""}
+                  {i % 2 === 0
+                    ? new Date(s).toLocaleTimeString("ja-JP", {
+                        hour: "numeric",
+                        timeZone: "Asia/Tokyo",
+                      })
+                    : ""}
                 </TableHead>
               ))}
             </TableRow>
@@ -126,7 +141,7 @@ export function ReserveGrid({ date, today, now, spaces, availability }: Props) {
                 <TableCell className="sticky left-0 z-10 bg-card px-3 py-2">
                   <div className="font-medium text-foreground">{space.name}</div>
                   <div className="text-muted-foreground">
-                    {spaceKindLabel[space.kind]}・{space.capacity}名
+                    {spaceKindLabel[space.kind]}・{space.capacity}名{space.hourly_price > 0 && `・${yen(space.hourly_price)}/時`}
                   </div>
                 </TableCell>
                 {slots.map((s, i) => {
@@ -134,7 +149,12 @@ export function ReserveGrid({ date, today, now, spaces, availability }: Props) {
                   const selected = selection?.spaceId === space.id && i >= selection.start && i <= selection.end;
                   const color = selected
                     ? "bg-emerald-600"
-                    : { free: "bg-emerald-100 hover:bg-emerald-300 cursor-pointer", reserved: "bg-stone-300", mine: "bg-sky-400", past: "bg-muted" }[state];
+                    : {
+                        free: "bg-emerald-100 hover:bg-emerald-300 cursor-pointer",
+                        reserved: "bg-stone-300",
+                        mine: "bg-sky-400",
+                        past: "bg-muted",
+                      }[state];
                   return (
                     <TableCell key={s} className="p-0.5">
                       <button
@@ -177,7 +197,12 @@ export function ReserveGrid({ date, today, now, spaces, availability }: Props) {
           <div>
             <p className="text-sm text-muted-foreground">選択中の予約</p>
             <p className="font-semibold">
-              {selectedSpace.name}　{date.replaceAll("-", "/")} {fmt(slots[selection.start])}〜{fmt(slots[selection.end] + slotMs)}
+              {selectedSpace.name}　{date.replaceAll("-", "/")} {fmt(slots[selection.start])}〜
+              {fmt(slots[selection.end] + slotMs)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              料金：
+              {yen(Math.round(selectedSpace.hourly_price * selectedHours))}
             </p>
           </div>
           <div className="flex gap-2">

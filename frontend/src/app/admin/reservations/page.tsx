@@ -28,7 +28,7 @@ export default async function AdminReservationsPage({ searchParams }: { searchPa
           <TableHeader>
             <TableRow>
               <TableHead className="px-4">日時</TableHead>
-              <TableHead className="px-4">スペース</TableHead>
+              <TableHead className="px-4">拠点・スペース</TableHead>
               <TableHead className="px-4">会員</TableHead>
               <TableHead className="px-4">状態</TableHead>
             </TableRow>
@@ -39,7 +39,9 @@ export default async function AdminReservationsPage({ searchParams }: { searchPa
                 <TableCell className="px-4">
                   {formatDateTime(r.starts_at)}〜{formatTime(r.ends_at)}
                 </TableCell>
-                <TableCell className="px-4">{r.space.name}</TableCell>
+                <TableCell className="px-4">
+                  {r.space.location?.name}　{r.space.name}
+                </TableCell>
                 <TableCell className="px-4">{r.user?.name}</TableCell>
                 <TableCell className="px-4 text-muted-foreground">{r.status === "canceled" ? "キャンセル" : "確定"}</TableCell>
               </TableRow>

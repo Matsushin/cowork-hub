@@ -3,6 +3,7 @@ class User < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :memberships, dependent: :destroy
   has_many :reservations, dependent: :destroy
+  has_many :visits, dependent: :destroy
 
   enum :role, { member: 0, admin: 1 }, validate: true
 

@@ -3,6 +3,6 @@ import { SignupForm } from "@/components/auth/SignupForm";
 import { getCurrentUser } from "@/lib/server/session";
 
 export default async function SignupPage() {
-  if (await getCurrentUser()) redirect("/reserve");
+  if (await getCurrentUser()) redirect("/locations");
   return <SignupForm />;
 }
