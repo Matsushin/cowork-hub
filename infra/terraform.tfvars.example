@@ -1,0 +1,5 @@
+# コピーして terraform.tfvars を作る（terraform.tfvars は .gitignore 済み）
+#   cp terraform.tfvars.example terraform.tfvars
+
+# 独自ドメインでHTTPS化する場合に指定する
+# domain_name = "coworking.example.com"
