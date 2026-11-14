@@ -15,15 +15,19 @@ const email = required("メールアドレス").pipe(z.email("メールアドレ
 const password = z.string().min(8, "パスワードは8文字以上で入力してください");
 
 /** フォームの数値（文字列でも数値でも受け取り、空欄は未入力として扱う） */
-const integer = (label: string, { min, max }: { min: number; max?: number }) =>
-  z.preprocess(
-    (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
-    z
-      .number({ error: (issue) => (issue.input === undefined ? `${label}を入力してください` : `${label}は数値で入力してください`) })
-      .int(`${label}は整数で入力してください`)
-      .min(min, `${label}は${min}以上で入力してください`)
-      .max(max ?? Number.MAX_SAFE_INTEGER, `${label}は${max}以下で入力してください`),
-  );
+const integer = (label: string, { min, max }: { min: number; max?: number }) => {
+  let schema = z
+    .number({ error: (issue) => (issue.input === undefined ? `${label}を入力してください` : `${label}は数値で入力してください`) })
+    .int(`${label}は整数で入力してください`)
+    .min(min, `${label}は${min}以上で入力してください`);
+  if (max !== undefined) schema = schema.max(max, `${label}は${max}以下で入力してください`);
+  return z.preprocess((v) => {
+    if (v === null || v === undefined) return undefined;
+    // 空白だけの入力も未入力として扱う（Number(" ") は 0 になってしまうため）
+    if (typeof v === "string") return v.trim() === "" ? undefined : Number(v);
+    return v;
+  }, schema);
+};
 
 /** 選択式の項目（未選択は空文字で届く） */
 const selected = (label: string) => z.string().min(1, `${label}を選択してください`);
