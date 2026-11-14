@@ -1,7 +1,12 @@
 class ReservationsController < ApplicationController
   def index
-    scope = current_user.reservations.includes(:space).order(starts_at: :desc)
-    scope = scope.upcoming.confirmed if params[:upcoming] == "true"
+    scope = current_user.reservations.includes(:space)
+    # 今後の予約は近い順、すべて表示のときは新しい順
+    scope = if params[:upcoming] == "true"
+      scope.upcoming.confirmed.order(starts_at: :asc)
+    else
+      scope.order(starts_at: :desc)
+    end
     render json: scope.map { |r| ReservationSerializer.call(r) }
   end
 
