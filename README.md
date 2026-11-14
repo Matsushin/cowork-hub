@@ -84,6 +84,30 @@ terraform -chdir=infra apply -var desired_count=0   # タスクだけ停止（AL
 terraform -chdir=infra destroy                      # すべて削除（データも消えます）
 ```
 
+## Claude Codeによるコードレビュー
+
+[Claude Code GitHub Action](https://github.com/anthropics/claude-code-action) を使っています。
+
+| ワークフロー | 動くタイミング | 内容 |
+|---|---|---|
+| `claude-review.yml` | PRの作成・更新時 | 変更をレビューし、該当行へのコメントと総評を日本語で投稿する |
+| `claude.yml` | PR・Issueのコメントやレビュー、Issueの作成・アサインで `@claude` と書いたとき | 質問に答えたり、修正してコミットしたりする |
+
+- レビューの観点とプロジェクトの規約は `CLAUDE.md` に書いています
+- 指摘には重要度（【必須】【推奨】【参考】）を付けます
+- `@claude` に反応するのは、オーナー・メンバー・コラボレーターのコメントだけです
+- ドラフトPRとフォークからのPRは自動レビューの対象外です
+
+### セットアップに必要なシークレット・変数
+
+リポジトリの Settings → Secrets and variables → Actions で登録します。値はリポジトリにコミットしないでください。
+
+| 名前 | 種類 | 役割 |
+|---|---|---|
+| `CLAUDE_CODE_OAUTH_TOKEN` | シークレット | Claude Codeの認証トークン。`claude-review.yml` と `claude.yml` がClaudeを呼び出すときに使う（`ANTHROPIC_API_KEY` で代用も可） |
+| `CLAUDE_APP_ID` | 変数（Variables） | 専用GitHub AppのID。設定すると `claude.yml` がAppのトークンを発行し、Claudeのpushでも CI と自動レビューが起動する。未設定なら既定のトークンで動く（その場合、pushではCIが起動しない） |
+| `CLAUDE_APP_PRIVATE_KEY` | シークレット | 専用GitHub Appの秘密鍵。`CLAUDE_APP_ID` とあわせてAppのトークンを発行するために使う |
+
 ## 学習用として割り切っている点
 
 - HTTPSなし（独自ドメインを用意したら、ACM＋ALBの443リスナーを追加）
