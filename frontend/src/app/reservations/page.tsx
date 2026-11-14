@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, formatDateTime, formatTime } from "@/lib/api";
 import type { Reservation } from "@/lib/types";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -12,10 +12,22 @@ import { Badge } from "@/components/ui/badge";
 function ReservationsInner() {
   const [items, setItems] = useState<Reservation[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [upcomingOnly, setUpcomingOnly] = useState(true);
+
+  // 切り替えや再読み込みで古くなったリクエストの応答は破棄する
+  const requestId = useRef(0);
 
   const load = useCallback(() => {
-    api<Reservation[]>("/reservations").then(setItems).catch((e) => setError(e.message));
-  }, []);
+    const id = ++requestId.current;
+    setError(null);
+    api<Reservation[]>(`/reservations${upcomingOnly ? "?upcoming=true" : ""}`)
+      .then((data) => {
+        if (id === requestId.current) setItems(data);
+      })
+      .catch((e) => {
+        if (id === requestId.current) setError(e.message);
+      });
+  }, [upcomingOnly]);
 
   useEffect(load, [load]);
 
@@ -31,9 +43,21 @@ function ReservationsInner() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">予約一覧</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">予約一覧</h1>
+        <div className="flex gap-1" role="group" aria-label="表示する予約">
+          <Button size="sm" variant={upcomingOnly ? "default" : "outline"} aria-pressed={upcomingOnly} onClick={() => setUpcomingOnly(true)}>
+            今後の予約
+          </Button>
+          <Button size="sm" variant={upcomingOnly ? "outline" : "default"} aria-pressed={!upcomingOnly} onClick={() => setUpcomingOnly(false)}>
+            すべて
+          </Button>
+        </div>
+      </div>
       <ErrorMessage message={error} />
-      {items.length === 0 && <p className="text-sm text-muted-foreground">予約はまだありません。</p>}
+      {items.length === 0 && (
+        <p className="text-sm text-muted-foreground">{upcomingOnly ? "今後の予約はありません。" : "予約はまだありません。"}</p>
+      )}
       <div className="space-y-2">
         {items.map((r) => (
           <Card key={r.id} className="px-5 flex flex-row flex-wrap items-center justify-between gap-3 py-4">
