@@ -98,6 +98,16 @@ terraform -chdir=infra destroy                      # すべて削除（デー�
 - `@claude` に反応するのは、オーナー・メンバー・コラボレーターのコメントだけです
 - ドラフトPRとフォークからのPRは自動レビューの対象外です
 
+### セットアップに必要なシークレット・変数
+
+リポジトリの Settings → Secrets and variables → Actions で登録します。値はリポジトリにコミットしないでください。
+
+| 名前 | 種類 | 役割 |
+|---|---|---|
+| `CLAUDE_CODE_OAUTH_TOKEN` | シークレット | Claude Codeの認証トークン。`claude-review.yml` と `claude.yml` がClaudeを呼び出すときに使う（`ANTHROPIC_API_KEY` で代用も可） |
+| `CLAUDE_APP_ID` | 変数（Variables） | 専用GitHub AppのID。設定すると `claude.yml` がAppのトークンを発行し、Claudeのpushでも CI と自動レビューが起動する。未設定なら既定のトークンで動く（その場合、pushではCIが起動しない） |
+| `CLAUDE_APP_PRIVATE_KEY` | シークレット | 専用GitHub Appの秘密鍵。`CLAUDE_APP_ID` とあわせてAppのトークンを発行するために使う |
+
 ## 学習用として割り切っている点
 
 - HTTPSなし（独自ドメインを用意したら、ACM＋ALBの443リスナーを追加）
