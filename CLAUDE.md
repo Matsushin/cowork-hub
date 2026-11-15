@@ -18,6 +18,10 @@
 ## 実装の約束ごと
 - APIはすべて `/api` 配下。本番ではALBが `/api/*` をRailsへ振り分ける
 - 認証は `Authorization: Bearer <token>`（Sessionモデルのトークン）
+- 権限チェックはPundit（`app/policies/`）。見てよい範囲は `policy_scope`、1件への操作は `authorize` で確認する
+  - 他人のレコードは `policy_scope(...).find` で404にする（存在を知られないため403にしない）
+  - 管理APIは `Admin::BaseController` の `authorize :admin, :access?`（AdminPolicy）。許可されなければ403
+  - 予約のキャンセル可否（開始前か）などの業務ルールはPolicyに入れず、モデルで判定して422を返す
 - バリデーションエラーは422で `{ error, errors: { 項目名: [メッセージ] } }` を返す
 - APIの仕様書は OpenAPI（`backend/swagger/v1/openapi.yaml`）。`spec/integration` のrswagのテストから生成し、レスポンスがスキーマどおりかも検証する。
   スキーマ（`components.schemas`）は `spec/swagger_helper.rb` に書く。APIを追加・変更したら

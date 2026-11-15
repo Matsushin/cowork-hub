@@ -1,6 +1,6 @@
 class ReservationsController < ApplicationController
   def index
-    scope = current_user.reservations.includes(space: :location)
+    scope = policy_scope(Reservation).includes(space: :location)
     # 今後の予約は近い順、すべて表示のときは新しい順
     scope = if params[:upcoming] == "true"
       scope.upcoming.confirmed.order(starts_at: :asc)
@@ -24,7 +24,9 @@ class ReservationsController < ApplicationController
   end
 
   def cancel
-    reservation = current_user.reservations.find(params[:id])
+    # 他人の予約は見えない範囲なので404（存在を知られないため403にしない）
+    reservation = policy_scope(Reservation).find(params[:id])
+    authorize reservation
     unless reservation.cancelable?
       return render json: { error: "この予約はキャンセルできません" }, status: :unprocessable_content
     end

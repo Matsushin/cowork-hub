@@ -1,12 +1,12 @@
 class VisitsController < ApplicationController
   def index
-    visits = current_user.visits.includes(:location).order(checked_in_at: :desc).limit(100)
+    visits = policy_scope(Visit).includes(:location).order(checked_in_at: :desc).limit(100)
     render json: visits.map { |v| VisitSerializer.call(v) }
   end
 
   # 利用中のドロップイン（なければ null）
   def current
-    visit = current_user.visits.in_progress.includes(:location).first
+    visit = policy_scope(Visit).in_progress.includes(:location).first
     render json: visit && VisitSerializer.call(visit)
   end
 
@@ -19,7 +19,8 @@ class VisitsController < ApplicationController
   end
 
   def checkout
-    visit = current_user.visits.find(params[:id])
+    visit = policy_scope(Visit).find(params[:id])
+    authorize visit
     visit.check_out!
     render json: VisitSerializer.call(visit)
   end
