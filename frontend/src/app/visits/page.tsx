@@ -39,7 +39,7 @@ export default async function VisitsPage() {
             action={checkOut.bind(null, current.id)}
             confirm={{
               title: `${current.location.name}からチェックアウトしますか？`,
-              description: `現在の料金は${yen(current.estimated_amount ?? 0)}です。チェックアウトすると料金が確定します。`,
+              description: `料金の目安は${yen(current.estimated_amount ?? 0)}です（画面を開いた時点）。チェックアウトした時刻で30分単位に計算し、料金が確定します。`,
               actionLabel: "チェックアウトする",
             }}
           >
