@@ -1,3 +1,8 @@
+# 開発環境
+#   docker compose up -d        … MySQL・Rails（http://localhost:3001）・Mailpit（http://localhost:8025）を起動
+#   docker compose logs -f backend
+#   docker compose exec backend bundle exec rspec
+# フロントエンド（Next.js）はホストで npm run dev を実行する（API_ORIGIN=http://localhost:3001）
 services:
   db:
     image: mysql:8.4
@@ -11,5 +16,43 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ppassword"]
       interval: 5s
       retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3000"
+    environment:
+      DB_HOST: db
+      # 送ったメールは Mailpit で確認する（http://localhost:8025）
+      SMTP_ADDRESS: mailpit
+      SMTP_PORT: "1025"
+      APP_URL: http://localhost:3000
+    volumes:
+      - ./backend:/rails
+      # gemはイメージではなくボリュームに置き、Gemfileを変えても作り直さずに済むようにする
+      - bundle:/usr/local/bundle
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/up"]
+      interval: 5s
+      retries: 30
+      start_period: 30s
+    tty: true
+    stdin_open: true # binding.irb / debug で止められるように
+
+  # 開発用のメールサーバー。送信されたメールをブラウザで確認できる
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "8025:8025" # Web画面
+      - "1025:1025" # SMTP
+
 volumes:
   mysql-data:
+  bundle:

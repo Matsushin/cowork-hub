@@ -31,8 +31,15 @@ Rails.application.configure do
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 
-  # 送ったメールはブラウザで開く（実際には送信しない）
-  config.action_mailer.delivery_method = :letter_opener
+  # 送ったメールの確認方法
+  # - Dockerで動かすとき（compose.yml）：Mailpit にSMTPで送る（http://localhost:8025 で確認）
+  # - ホストで直接動かすとき：letter_opener でブラウザに開く
+  if ENV["SMTP_ADDRESS"].present?
+    config.action_mailer.delivery_method = :smtp
+    config.action_mailer.smtp_settings = { address: ENV["SMTP_ADDRESS"], port: ENV.fetch("SMTP_PORT", 1025).to_i }
+  else
+    config.action_mailer.delivery_method = :letter_opener
+  end
   config.action_mailer.perform_deliveries = true
 
   # 非同期処理は本番と同じSolid Queueで動かす（Pumaの中でワーカーも起動する。config/puma.rb）

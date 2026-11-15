@@ -56,11 +56,29 @@ bin/        デプロイ・seed用スクリプト
 
 ツールのバージョンは [mise](https://mise.jdx.dev/) で管理しています（Ruby 4.0 / Node 26 / Terraform 1.17）。
 
+バックエンド（Rails・MySQL・メール確認用のMailpit）は **Docker** で、フロントエンド（Next.js）は手元で動かします。
+
 ```bash
-mise install
-docker compose up -d           # MySQL
-cd backend && bundle install && bin/rails db:prepare db:seed && bin/rails s -p 3001
-cd frontend && npm install && npm run dev   # http://localhost:3000
+mise install                                   # Node（フロント用）など
+docker compose up -d                           # MySQL・Rails（:3001）・Mailpit（:8025）。初回はイメージのビルドに数分かかります
+docker compose exec backend bin/rails db:seed  # 初回のみ。DBの作成・マイグレーションは起動時に自動で行う
+cd frontend && npm ci && npm run dev           # http://localhost:3000
+```
+
+| URL | 内容 |
+|---|---|
+| http://localhost:3000 | 画面（Next.js） |
+| http://localhost:3001 | Rails API |
+| http://localhost:8025 | Mailpit（予約メールなど、送信されたメールを確認する） |
+
+よく使うコマンド
+
+```bash
+docker compose logs -f backend                  # Railsのログ
+docker compose exec backend bin/rails console   # コンソール
+docker compose exec backend bin/rails db:migrate
+docker compose restart backend                  # Gemfileを変えたあと（起動時に bundle install する）
+docker compose down                             # 停止（DBのデータはボリュームに残る）
 ```
 
 開発用アカウント（seedで作成）
@@ -70,8 +88,10 @@ cd frontend && npm install && npm run dev   # http://localhost:3000
 テスト
 
 ```bash
-cd backend && bundle exec rspec && bin/rubocop
-cd frontend && npm run lint && npx tsc --noEmit
+docker compose exec backend bundle exec rspec
+docker compose exec backend bin/rubocop
+cd frontend && npm run lint && npx tsc --noEmit && npm test
+cd frontend && npm run test:e2e   # docker compose up -d で起動しておく
 ```
 
 ## AWSへのデプロイ
