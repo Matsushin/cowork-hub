@@ -1,35 +1,27 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { debounce, parseAsString, useQueryState } from "nuqs";
 import { Input } from "@/components/ui/input";
 
 /**
- * 入力値をURLの検索パラメータに反映する（Server Componentがその値で再取得する）
- * 文字入力は少し待ってから反映し、日付などは即時に反映する
+ * 入力値をURLの検索パラメータに反映する（nuqs）
+ * shallow: false でサーバーへ再リクエストし、Server Component がその値で再取得する。
+ * 文字入力は delay ミリ秒待ってからURLに反映し（入力欄の表示はすぐ変わる）、日付などは即時に反映する
  */
 export function SearchParamInput({
   param,
   delay = 0,
   ...inputProps
 }: { param: string; delay?: number } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "defaultValue">) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const current = searchParams.get(param) ?? "";
-  const [value, setValue] = useState(current);
+  const [value, setValue] = useQueryState(
+    param,
+    parseAsString.withDefault("").withOptions({
+      shallow: false,
+      history: "replace", // 1文字ごとに履歴を増やさない
+      limitUrlUpdates: delay > 0 ? debounce(delay) : undefined,
+    }),
+  );
 
-  useEffect(() => {
-    if (value === current) return;
-    const t = setTimeout(() => {
-      const next = new URLSearchParams(searchParams);
-      if (value) next.set(param, value);
-      else next.delete(param);
-      const qs = next.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname);
-    }, delay);
-    return () => clearTimeout(t);
-  }, [value, current, delay, param, pathname, router, searchParams]);
-
+  // 空欄にしたら、既定値と同じなのでURLからパラメータごと消える（clearOnDefault）
   return <Input {...inputProps} value={value} onChange={(e) => setValue(e.target.value)} />;
 }

@@ -1,14 +1,16 @@
 import { MonthNav } from "@/components/MonthNav";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { currentMonthInTokyo, formatMonth, isValidMonth, yen } from "@/lib/format";
+import { currentMonthInTokyo, formatMonth, yen } from "@/lib/format";
 import { apiFetch } from "@/lib/server/api";
 import type { Sales } from "@/lib/types";
+import { loadMonthParams } from "@/lib/search-params";
+import type { SearchParams } from "nuqs/server";
 
-export default async function AdminSalesPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+export default async function AdminSalesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const thisMonth = currentMonthInTokyo();
-  const { month: requested } = await searchParams;
-  const month = isValidMonth(requested) && requested <= thisMonth ? requested : thisMonth;
+  const { month: requested } = await loadMonthParams(searchParams);
+  const month = requested && requested <= thisMonth ? requested : thisMonth;
   const sales = await apiFetch<Sales>(`/admin/sales?month=${month}`);
   const sum = (key: "visit_count" | "visit_amount" | "reservation_amount") => sales.locations.reduce((acc, r) => acc + r[key], 0);
 

@@ -36,6 +36,8 @@
   スキーマは `lib/schemas.ts` に置き、Server Action側でも `parseInput` で同じスキーマを使って検証してからRailsへ送る。
   1クリックの操作は `ActionButton` に `.bind(null, id)` したServer Actionを渡す
 - 日時の表示は `lib/format.ts` を使う（サーバーはUTCなので、日本時間を明示している）
+- URLのクエリパラメータ（`?date=` `?month=` `?q=` `?filter=`）は nuqs で扱う。定義は `lib/search-params.ts` に集約し、
+  Server Component は `load...Params(searchParams)`、クライアントは `useQueryState`（再取得が必要なら `shallow: false`）、リンクは `serialize...` を使う
 - ドメインの関係：拠点（Location）→ スペース（Space）→ 予約（Reservation）。ドロップイン利用は Visit（会員×拠点）
 - 予約の重複防止は `Reservation.reserve!` でスペース行をロックしてから確認する。料金（amount）もここで確定する
 - ドロップインは `Visit.check_in!`（会員行をロックして1拠点だけに制限）と `Visit#check_out!`（行をロックして料金を確定）で行う

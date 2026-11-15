@@ -4,12 +4,12 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { apiFetch } from "@/lib/server/api";
 import { PREFECTURES } from "@/lib/prefectures";
+import { loadLocationSearchParams } from "@/lib/search-params";
 import type { Location } from "@/lib/types";
-
-type SearchParams = { q?: string; prefecture?: string };
+import type { SearchParams } from "nuqs/server";
 
 export default async function LocationsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const { q = "", prefecture = "" } = await searchParams;
+  const { q, prefecture } = await loadLocationSearchParams(searchParams);
   const query = new URLSearchParams({ q, prefecture }).toString();
   const locations = await apiFetch<Location[]>(`/locations?${query}`, {
     auth: false,

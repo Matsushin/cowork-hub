@@ -2,13 +2,15 @@ import Link from "next/link";
 import { SearchParamInput } from "@/components/admin/SearchParamInput";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDateTime, formatTime, isValidDate } from "@/lib/format";
+import { formatDateTime, formatTime } from "@/lib/format";
 import { apiFetch } from "@/lib/server/api";
+import { loadDateParams } from "@/lib/search-params";
 import type { Reservation } from "@/lib/types";
+import type { SearchParams } from "nuqs/server";
 
-export default async function AdminReservationsPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
-  const { date } = await searchParams;
-  const filtered = isValidDate(date);
+export default async function AdminReservationsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const { date } = await loadDateParams(searchParams); // 形式が不正なら null
+  const filtered = date !== null;
   const items = await apiFetch<Reservation[]>(`/admin/reservations${filtered ? `?date=${date}` : ""}`);
 
   return (
