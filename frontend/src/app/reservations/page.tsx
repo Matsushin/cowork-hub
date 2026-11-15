@@ -66,7 +66,12 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
               <ActionButton
                 variant="destructive"
                 action={cancelReservation.bind(null, r.id)}
-                confirmMessage={`${r.space.location?.name} ${r.space.name} ${formatDateTime(r.starts_at)} の予約をキャンセルしますか？`}
+                confirm={{
+                  title: "この予約をキャンセルしますか？",
+                  description: `${r.space.location?.name} ${r.space.name} ${formatDateTime(r.starts_at)}〜${formatTime(r.ends_at)}`,
+                  actionLabel: "キャンセルする",
+                  destructive: true,
+                }}
               >
                 キャンセル
               </ActionButton>

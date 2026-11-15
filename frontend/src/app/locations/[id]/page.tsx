@@ -50,7 +50,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
             <dd>{location.current_visitors}人</dd>
           </dl>
           {!user ? (
-            <Link href="/login" className={buttonVariants({ className: "self-start" })}>
+            <Link href={`/login?next=/locations/${location.id}`} className={buttonVariants({ className: "self-start" })}>
               ログインしてチェックイン
             </Link>
           ) : currentVisit ? (
@@ -86,7 +86,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
           )}
           {location.spaces.length > 0 && (
             <Link
-              href={user ? `/locations/${location.id}/reserve` : "/login"}
+              href={user ? `/locations/${location.id}/reserve` : `/login?next=/locations/${location.id}/reserve`}
               className={buttonVariants({
                 variant: "outline",
                 className: "self-start",

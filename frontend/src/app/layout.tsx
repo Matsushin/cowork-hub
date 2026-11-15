@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Header } from "@/components/Header";
+import { Toaster } from "@/components/ui/sonner";
 import { apiFetch } from "@/lib/server/api";
 import { getCurrentUser } from "@/lib/server/session";
 import type { Visit } from "@/lib/types";
@@ -22,6 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Header user={user} currentVisit={currentVisit} />
           <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
         </NuqsAdapter>
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );
