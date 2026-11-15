@@ -1,16 +1,18 @@
 import { AutoCheckoutBadge } from "@/components/AutoCheckoutBadge";
 import { MonthNav } from "@/components/MonthNav";
 import { Card } from "@/components/ui/card";
-import { currentMonthInTokyo, formatDateTime, formatDuration, formatMonth, formatTime, isValidMonth, yen } from "@/lib/format";
+import { currentMonthInTokyo, formatDateTime, formatDuration, formatMonth, formatTime, yen } from "@/lib/format";
 import { apiFetch } from "@/lib/server/api";
 import { requireUser } from "@/lib/server/session";
 import type { Bill } from "@/lib/types";
+import { loadMonthParams } from "@/lib/search-params";
+import type { SearchParams } from "nuqs/server";
 
-export default async function BillingPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+export default async function BillingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await requireUser();
   const thisMonth = currentMonthInTokyo();
-  const { month: requested } = await searchParams;
-  const month = isValidMonth(requested) && requested <= thisMonth ? requested : thisMonth;
+  const { month: requested } = await loadMonthParams(searchParams);
+  const month = requested && requested <= thisMonth ? requested : thisMonth;
   const bill = await apiFetch<Bill>(`/billing?month=${month}`);
 
   return (

@@ -3,10 +3,12 @@ import { SearchParamInput } from "@/components/admin/SearchParamInput";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { apiFetch } from "@/lib/server/api";
+import { loadKeywordParams } from "@/lib/search-params";
 import type { User } from "@/lib/types";
+import type { SearchParams } from "nuqs/server";
 
-export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q = "" } = await searchParams;
+export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const { q } = await loadKeywordParams(searchParams);
   const users = await apiFetch<User[]>(`/admin/users?q=${encodeURIComponent(q)}`);
 
   return (

@@ -7,12 +7,15 @@ import { Card } from "@/components/ui/card";
 import { formatDateTime, formatTime, yen } from "@/lib/format";
 import { apiFetch } from "@/lib/server/api";
 import { requireUser } from "@/lib/server/session";
+import { loadReservationFilterParams, serializeReservationFilter } from "@/lib/search-params";
 import type { Reservation } from "@/lib/types";
+import type { SearchParams } from "nuqs/server";
 
-export default async function ReservationsPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+export default async function ReservationsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await requireUser();
   // 表示の切り替えはURL（?filter=all）で持つ。リロードやブックマークでも状態が残る
-  const upcomingOnly = (await searchParams).filter !== "all";
+  const { filter } = await loadReservationFilterParams(searchParams);
+  const upcomingOnly = filter === "upcoming";
   const items = await apiFetch<Reservation[]>(`/reservations${upcomingOnly ? "?upcoming=true" : ""}`);
 
   return (
@@ -21,7 +24,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
         <h1 className="text-2xl font-bold">予約一覧</h1>
         <div className="flex gap-1" role="group" aria-label="表示する予約">
           <Link
-            href="/reservations"
+            href={serializeReservationFilter("/reservations", { filter: "upcoming" })}
             aria-current={upcomingOnly ? "page" : undefined}
             className={buttonVariants({
               size: "sm",
@@ -31,7 +34,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
             今後の予約
           </Link>
           <Link
-            href="/reservations?filter=all"
+            href={serializeReservationFilter("/reservations", { filter: "all" })}
             aria-current={upcomingOnly ? undefined : "page"}
             className={buttonVariants({
               size: "sm",

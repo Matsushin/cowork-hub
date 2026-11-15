@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQueryState } from "nuqs";
 import { useMemo, useState, useTransition } from "react";
 import { createReservation } from "@/app/actions/member";
 import { ErrorMessage } from "@/components/form";
@@ -9,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { spaceKindLabel, yen } from "@/lib/format";
+import { parseAsDate } from "@/lib/search-params";
 import type { Availability, Location, Space } from "@/lib/types";
 
 type Selection = { spaceId: number; start: number; end: number } | null;
@@ -36,6 +38,13 @@ export function ReserveGrid({ location, date, today, now, spaces, availability }
   const [selection, setSelection] = useState<Selection>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // 日付はURL（?date=）で持つ。変えるとサーバーで空き状況を取り直す（shallow: false）。戻るボタンで前の日付に戻れる
+  // URLはすぐ変わるが、新しい空き状況が届くまでは loadingDate が true（古い表を操作させない）
+  const [loadingDate, startDateTransition] = useTransition();
+  const [dateParam, setDate] = useQueryState(
+    "date",
+    parseAsDate.withOptions({ shallow: false, history: "push", startTransition: startDateTransition }),
+  );
 
   const { open_hour, close_hour, slot_minutes } = availability;
   const slotMs = slot_minutes * 60_000;
@@ -107,16 +116,20 @@ export function ReserveGrid({ location, date, today, now, spaces, availability }
           <Input
             type="date"
             aria-label="日付"
-            value={date}
+            value={dateParam ?? date} // 読み込み中も、選んだ日付をすぐ表示する
             min={today}
-            onChange={(e) => e.target.value && router.push(`/locations/${location.id}/reserve?date=${e.target.value}`)}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              setSelection(null);
+              setDate(e.target.value);
+            }}
           />
         </div>
       </div>
 
       <ErrorMessage message={error} />
 
-      <Card className="overflow-x-auto p-0">
+      <Card className={`overflow-x-auto p-0 transition-opacity ${loadingDate ? "pointer-events-none opacity-50" : ""}`} aria-busy={loadingDate} data-date={date}>
         <Table className="w-full border-collapse text-xs">
           <TableHeader>
             <TableRow>

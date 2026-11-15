@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { ReserveGrid } from "@/components/reserve/ReserveGrid";
 import { ApiError } from "@/lib/api-error";
-import { isValidDate, todayInTokyo } from "@/lib/format";
+import { todayInTokyo } from "@/lib/format";
+import { loadDateParams } from "@/lib/search-params";
+import type { SearchParams } from "nuqs/server";
 import { apiFetch } from "@/lib/server/api";
 import { requireUser } from "@/lib/server/session";
 import type { Availability, Location, Space } from "@/lib/types";
@@ -15,13 +17,13 @@ export default async function ReservePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   await requireUser();
   const { id } = await params;
   const today = todayInTokyo();
-  const { date: requested } = await searchParams;
-  const date = isValidDate(requested) && requested >= today ? requested : today;
+  const { date: requested } = await loadDateParams(searchParams);
+  const date = requested && requested >= today ? requested : today;
 
   // 拠点・スペース一覧・空き状況をサーバーで並行して取得する
   const [location, spaces, availability] = await Promise.all([

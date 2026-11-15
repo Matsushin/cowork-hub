@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 // backend/db/seeds.rb で作る開発・テスト用アカウント
 export const MEMBER = { email: "member@example.com", password: "password123" };
+export const ADMIN = { email: "admin@example.com", password: "password123" };
 
 export async function login(page: Page, { email, password } = MEMBER) {
   await page.getByLabel("メールアドレス").fill(email);
