@@ -55,12 +55,12 @@ jobs:
       - name: GitHub Appのトークンを発行
         id: app-token
         if: vars.CLAUDE_APP_ID != ''
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ vars.CLAUDE_APP_ID }}
           private-key: ${{ secrets.CLAUDE_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -73,9 +73,9 @@ jobs:
         working-directory: backend
         run: bin/rails db:create db:schema:load
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 

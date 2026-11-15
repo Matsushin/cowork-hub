@@ -54,7 +54,7 @@ bin/        デプロイ・seed用スクリプト
 
 ## ローカル開発
 
-ツールのバージョンは [mise](https://mise.jdx.dev/) で管理しています（Ruby 3.3 / Node 22 / Terraform 1.13）。
+ツールのバージョンは [mise](https://mise.jdx.dev/) で管理しています（Ruby 4.0 / Node 26 / Terraform 1.17）。
 
 ```bash
 mise install
