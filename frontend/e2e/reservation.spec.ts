@@ -16,8 +16,8 @@ test("拠点を選んで会議室・席を予約し、予約一覧からキャ�
   const date = dateInTokyo(7);
   await page.getByLabel("日付").fill(date);
   await expect(page).toHaveURL(new RegExp(`date=${date}`));
-  // URLは先に変わるので、新しい日付の空き状況が届く（読み込み中の表示が消える）まで待つ
-  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  // URLは先に変わるので、表が新しい日付の空き状況に切り替わり、読み込み中の表示が消えるまで待つ
+  await expect(page.locator(`[data-date="${date}"][aria-busy="false"]`)).toBeVisible();
   const slot = page.locator('button[aria-label^="フリー席B "]:not([disabled])').first();
   const slotLabel = await slot.getAttribute("aria-label");
   await slot.click();
