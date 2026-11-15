@@ -64,6 +64,11 @@ RSpec.describe "管理者API", type: :request do
   end
 
   describe "売上集計" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    # 月初の利用が「閉店済み」になる日時に固定する（月初の日中に実行すると結果が変わらないように）
+    around { |example| travel_to(Time.zone.local(2026, 11, 15, 12, 0)) { example.run } }
+
     let(:month) { Date.current.beginning_of_month }
     let(:a) { create(:location, name: "A") }
     let(:b) { create(:location, name: "B") }
@@ -76,7 +81,8 @@ RSpec.describe "管理者API", type: :request do
       finished_visit(location: a, at: month.in_time_zone.change(hour: 10), amount: 600)
       finished_visit(location: a, at: month.in_time_zone.change(hour: 14), amount: 300)
       finished_visit(location: b, at: (month - 1.day).in_time_zone.change(hour: 10), amount: 999) # 先月
-      create(:visit, location: b, checked_in_at: month.in_time_zone.change(hour: 10)) # 利用中は含めない
+      # 1日のチェックアウトし忘れは閉店時刻で締めて数える（会員は月額プランなので0円）
+      create(:visit, location: b, checked_in_at: month.in_time_zone.change(hour: 10))
       room = create(:space, location: b, kind: :meeting_room, hourly_price: 1000)
       build(:reservation, space: room, starts_at: month.in_time_zone.change(hour: 10), ends_at: month.in_time_zone.change(hour: 12), amount: 2000)
         .save!(validate: false)
@@ -88,7 +94,7 @@ RSpec.describe "管理者API", type: :request do
       expect(response).to have_http_status(:ok)
       rows = json["locations"].index_by { |r| r.dig("location", "name") }
       expect(rows["A"]).to include("visit_count" => 2, "visit_amount" => 900, "reservation_amount" => 0)
-      expect(rows["B"]).to include("visit_count" => 0, "visit_amount" => 0, "reservation_amount" => 2000)
+      expect(rows["B"]).to include("visit_count" => 1, "visit_amount" => 0, "reservation_amount" => 2000)
       # adminとmemberのプラン（factoryの月額10000円）＋8800円
       expect(json["plan_amount"]).to eq Membership.active_on(Date.current).joins(:plan).merge(Plan.monthly).sum("plans.price")
       expect(json["total"]).to eq 900 + 2000 + json["plan_amount"]
