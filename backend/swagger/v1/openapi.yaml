@@ -1,0 +1,1249 @@
+---
+openapi: 3.0.3
+info:
+  title: ee-office API
+  version: v1
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: ログイン・会員登録で受け取ったトークン
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        errors:
+          type: object
+          description: 項目名 → エラーメッセージ一覧（項目に属さないものは base）。バリデーションエラー（422）のときだけ返す
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+      - error
+    Plan:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+          - drop_in
+          - monthly
+        price:
+          type: integer
+        monthly_hours_limit:
+          type: integer
+          nullable: true
+        description:
+          type: string
+          nullable: true
+      required:
+      - id
+      - name
+      - kind
+      - price
+      - monthly_hours_limit
+      - description
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email_address:
+          type: string
+        role:
+          type: string
+          enum:
+          - member
+          - admin
+        plan:
+          allOf:
+          - "$ref": "#/components/schemas/Plan"
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - name
+      - email_address
+      - role
+      - plan
+      - created_at
+    UserDetail:
+      allOf:
+      - "$ref": "#/components/schemas/User"
+      - type: object
+        properties:
+          reservations:
+            type: array
+            items:
+              "$ref": "#/components/schemas/Reservation"
+          visits:
+            type: array
+            items:
+              "$ref": "#/components/schemas/Visit"
+        required:
+        - reservations
+        - visits
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email_address:
+          type: string
+      required:
+      - id
+      - name
+      - email_address
+    SessionResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          "$ref": "#/components/schemas/User"
+      required:
+      - token
+      - user
+    Location:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        prefecture:
+          type: string
+        address:
+          type: string
+        description:
+          type: string
+          nullable: true
+        open_hour:
+          type: integer
+        close_hour:
+          type: integer
+        hourly_price:
+          type: integer
+        daily_max_price:
+          type: integer
+        active:
+          type: boolean
+        current_visitors:
+          type: integer
+          description: 利用中の人数（一覧・詳細のみ）
+      required:
+      - id
+      - name
+      - prefecture
+      - address
+      - description
+      - open_hour
+      - close_hour
+      - hourly_price
+      - daily_max_price
+      - active
+    LocationDetail:
+      allOf:
+      - "$ref": "#/components/schemas/Location"
+      - type: object
+        properties:
+          spaces:
+            type: array
+            items:
+              "$ref": "#/components/schemas/Space"
+        required:
+        - spaces
+    Space:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        kind:
+          type: string
+          enum:
+          - seat
+          - meeting_room
+        capacity:
+          type: integer
+        hourly_price:
+          type: integer
+        active:
+          type: boolean
+        location_id:
+          type: integer
+        location:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+          required:
+          - id
+          - name
+          description: 予約・管理画面のみ
+      required:
+      - id
+      - name
+      - kind
+      - capacity
+      - hourly_price
+      - active
+      - location_id
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - confirmed
+          - canceled
+        amount:
+          type: integer
+        space:
+          "$ref": "#/components/schemas/Space"
+        cancelable:
+          type: boolean
+        user:
+          "$ref": "#/components/schemas/UserSummary"
+          description: 管理画面のみ
+      required:
+      - id
+      - starts_at
+      - ends_at
+      - status
+      - amount
+      - space
+      - cancelable
+    Availability:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        open_hour:
+          type: integer
+        close_hour:
+          type: integer
+        slot_minutes:
+          type: integer
+        reserved:
+          type: array
+          items:
+            type: object
+            properties:
+              space_id:
+                type: integer
+              starts_at:
+                type: string
+                format: date-time
+              ends_at:
+                type: string
+                format: date-time
+              mine:
+                type: boolean
+            required:
+            - space_id
+            - starts_at
+            - ends_at
+            - mine
+      required:
+      - date
+      - open_hour
+      - close_hour
+      - slot_minutes
+      - reserved
+    Visit:
+      type: object
+      properties:
+        id:
+          type: integer
+        checked_in_at:
+          type: string
+          format: date-time
+        checked_out_at:
+          type: string
+          format: date-time
+          nullable: true
+        amount:
+          type: integer
+          nullable: true
+        estimated_amount:
+          type: integer
+          description: 利用中のみ。今チェックアウトした場合の料金
+        duration_minutes:
+          type: integer
+        location:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+          required:
+          - id
+          - name
+        user:
+          "$ref": "#/components/schemas/UserSummary"
+      required:
+      - id
+      - checked_in_at
+      - checked_out_at
+      - amount
+      - duration_minutes
+      - location
+    Bill:
+      type: object
+      properties:
+        month:
+          type: string
+          example: 2026-11
+        plan:
+          allOf:
+          - "$ref": "#/components/schemas/Plan"
+          nullable: true
+        plan_fee:
+          type: integer
+        visits:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Visit"
+        visits_total:
+          type: integer
+        reservations:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Reservation"
+        reservations_total:
+          type: integer
+        total:
+          type: integer
+      required:
+      - month
+      - plan
+      - plan_fee
+      - visits
+      - visits_total
+      - reservations
+      - reservations_total
+      - total
+    Sales:
+      type: object
+      properties:
+        month:
+          type: string
+          example: 2026-11
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              location:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  prefecture:
+                    type: string
+                required:
+                - id
+                - name
+                - prefecture
+              visit_count:
+                type: integer
+              visit_amount:
+                type: integer
+              reservation_amount:
+                type: integer
+              total:
+                type: integer
+            required:
+            - location
+            - visit_count
+            - visit_amount
+            - reservation_amount
+            - total
+        plan_amount:
+          type: integer
+        total:
+          type: integer
+      required:
+      - month
+      - locations
+      - plan_amount
+      - total
+security:
+- bearer: []
+paths:
+  "/api/admin/users":
+    get:
+      summary: 会員一覧
+      tags:
+      - 管理
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+        description: 名前・メールアドレスの部分一致
+      responses:
+        '200':
+          description: 会員一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/User"
+        '403':
+          description: 管理者以外
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/admin/users/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: 会員の詳細（直近の予約・利用つき）
+      tags:
+      - 管理
+      responses:
+        '200':
+          description: 会員の詳細
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/UserDetail"
+        '404':
+          description: 存在しない会員
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: 会員の権限・プランの変更
+      tags:
+      - 管理
+      parameters: []
+      responses:
+        '200':
+          description: 変更した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/User"
+        '422':
+          description: 存在しない権限
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    role:
+                      type: string
+                      enum:
+                      - member
+                      - admin
+                    plan_id:
+                      type: integer
+              required:
+              - user
+  "/api/admin/reservations":
+    get:
+      summary: 全会員の予約（新しい順・200件まで）
+      tags:
+      - 管理
+      parameters:
+      - name: date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: 予約一覧（会員情報つき）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Reservation"
+        '403':
+          description: 管理者以外
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/admin/locations":
+    get:
+      summary: 拠点一覧（非公開を含む）
+      tags:
+      - 管理
+      responses:
+        '200':
+          description: 拠点一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Location"
+        '403':
+          description: 管理者以外
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: 拠点の追加
+      tags:
+      - 管理
+      parameters: []
+      responses:
+        '201':
+          description: 追加した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Location"
+        '422':
+          description: 入力内容の誤り
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                location:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    prefecture:
+                      type: string
+                    address:
+                      type: string
+                    description:
+                      type: string
+                    open_hour:
+                      type: integer
+                    close_hour:
+                      type: integer
+                    hourly_price:
+                      type: integer
+                    daily_max_price:
+                      type: integer
+                  required:
+                  - name
+                  - prefecture
+                  - address
+                  - open_hour
+                  - close_hour
+                  - hourly_price
+                  - daily_max_price
+              required:
+              - location
+  "/api/admin/locations/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    patch:
+      summary: 拠点の更新（公開・非公開の切り替えなど）
+      tags:
+      - 管理
+      parameters: []
+      responses:
+        '200':
+          description: 更新した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Location"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                location:
+                  type: object
+                  properties:
+                    active:
+                      type: boolean
+              required:
+              - location
+  "/api/admin/spaces":
+    get:
+      summary: スペース一覧（非公開を含む）
+      tags:
+      - 管理
+      responses:
+        '200':
+          description: スペース一覧（拠点名つき）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Space"
+        '403':
+          description: 管理者以外
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: スペースの追加
+      tags:
+      - 管理
+      parameters: []
+      responses:
+        '201':
+          description: 追加した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Space"
+        '422':
+          description: 入力内容の誤り
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                space:
+                  type: object
+                  properties:
+                    location_id:
+                      type: integer
+                    name:
+                      type: string
+                    kind:
+                      type: string
+                      enum:
+                      - seat
+                      - meeting_room
+                    capacity:
+                      type: integer
+                    hourly_price:
+                      type: integer
+                  required:
+                  - location_id
+                  - name
+                  - kind
+                  - capacity
+                  - hourly_price
+              required:
+              - space
+  "/api/admin/spaces/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    patch:
+      summary: スペースの更新
+      tags:
+      - 管理
+      parameters: []
+      responses:
+        '200':
+          description: 更新した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Space"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                space:
+                  type: object
+                  properties:
+                    active:
+                      type: boolean
+              required:
+              - space
+    delete:
+      summary: スペースの削除（予約があれば削除できない）
+      tags:
+      - 管理
+      responses:
+        '204':
+          description: 削除した
+        '422':
+          description: 予約がある
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/admin/sales":
+    get:
+      summary: 拠点別の月次売上
+      tags:
+      - 管理
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: "^\\d{4}-\\d{2}$"
+      responses:
+        '200':
+          description: 拠点別の売上と月額プラン料金
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Sales"
+        '403':
+          description: 管理者以外
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/signup":
+    post:
+      summary: 会員登録（ドロップインプランで開始）
+      tags:
+      - 認証
+      security: []
+      parameters: []
+      responses:
+        '201':
+          description: 登録してログインした
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SessionResponse"
+        '422':
+          description: 入力内容の誤り
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email_address:
+                      type: string
+                    password:
+                      type: string
+                  required:
+                  - name
+                  - email_address
+                  - password
+              required:
+              - user
+  "/api/session":
+    post:
+      summary: ログイン
+      tags:
+      - 認証
+      security: []
+      parameters: []
+      responses:
+        '201':
+          description: ログインした
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SessionResponse"
+        '401':
+          description: メールアドレスまたはパスワードが違う
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email_address:
+                  type: string
+                password:
+                  type: string
+              required:
+              - email_address
+              - password
+    delete:
+      summary: ログアウト
+      tags:
+      - 認証
+      responses:
+        '204':
+          description: ログアウトした
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/me":
+    get:
+      summary: ログイン中の会員
+      tags:
+      - 会員
+      responses:
+        '200':
+          description: 会員情報
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/User"
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: 会員情報の更新
+      tags:
+      - 会員
+      parameters: []
+      responses:
+        '200':
+          description: 更新した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/User"
+        '422':
+          description: 入力内容の誤り
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email_address:
+                      type: string
+                    password:
+                      type: string
+                      description: 変更するときだけ送る
+              required:
+              - user
+  "/api/plans":
+    get:
+      summary: 料金プラン一覧
+      tags:
+      - プラン
+      security: []
+      responses:
+        '200':
+          description: プラン一覧（安い順）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Plan"
+  "/api/locations":
+    get:
+      summary: 拠点の検索
+      tags:
+      - 拠点
+      security: []
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+        description: 拠点名・住所の部分一致
+      - name: prefecture
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 公開中の拠点（利用中の人数つき）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Location"
+  "/api/locations/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: 拠点の詳細
+      tags:
+      - 拠点
+      security: []
+      responses:
+        '200':
+          description: 拠点とスペース一覧
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/LocationDetail"
+        '404':
+          description: 存在しない・非公開
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/locations/{location_id}/spaces":
+    parameters:
+    - name: location_id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: 拠点のスペース一覧
+      tags:
+      - 拠点
+      responses:
+        '200':
+          description: 利用できるスペース
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Space"
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/locations/{location_id}/spaces/availability":
+    parameters:
+    - name: location_id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: 指定日の空き状況（予約済みの時間帯）
+      tags:
+      - 拠点
+      parameters:
+      - name: date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: 省略時は今日
+      responses:
+        '200':
+          description: 予約済みの時間帯（誰の予約かは mine だけ返す）
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Availability"
+        '400':
+          description: 日付の形式が不正
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/visits":
+    get:
+      summary: ドロップインの利用履歴（新しい順・100件まで）
+      tags:
+      - ドロップイン
+      responses:
+        '200':
+          description: 利用履歴
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Visit"
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: チェックイン
+      tags:
+      - ドロップイン
+      parameters: []
+      responses:
+        '201':
+          description: チェックインした
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Visit"
+        '409':
+          description: すでに別の拠点を利用中
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visit:
+                  type: object
+                  properties:
+                    location_id:
+                      type: integer
+                  required:
+                  - location_id
+              required:
+              - visit
+  "/api/visits/current":
+    get:
+      summary: 利用中のドロップイン
+      tags:
+      - ドロップイン
+      responses:
+        '200':
+          description: 利用中の利用（なければ null）
+          content:
+            application/json:
+              schema:
+                nullable: true
+                allOf:
+                - "$ref": "#/components/schemas/Visit"
+  "/api/visits/{id}/checkout":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    patch:
+      summary: チェックアウト（料金を確定）
+      tags:
+      - ドロップイン
+      responses:
+        '200':
+          description: チェックアウトした
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Visit"
+        '404':
+          description: 他人の利用
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/reservations":
+    get:
+      summary: 自分の予約一覧
+      tags:
+      - 予約
+      parameters:
+      - name: upcoming
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - 'true'
+        description: true なら今後の確定済み予約だけを近い順に返す
+      responses:
+        '200':
+          description: 予約一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Reservation"
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: 予約する（料金を確定）
+      tags:
+      - 予約
+      parameters: []
+      responses:
+        '201':
+          description: 予約した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Reservation"
+        '409':
+          description: 時間帯が重なる予約がある
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '422':
+          description: 営業時間外・30分単位でないなど
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reservation:
+                  type: object
+                  properties:
+                    space_id:
+                      type: integer
+                    starts_at:
+                      type: string
+                      format: date-time
+                    ends_at:
+                      type: string
+                      format: date-time
+                  required:
+                  - space_id
+                  - starts_at
+                  - ends_at
+              required:
+              - reservation
+  "/api/reservations/{id}/cancel":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    patch:
+      summary: 予約のキャンセル（開始前のみ）
+      tags:
+      - 予約
+      responses:
+        '200':
+          description: キャンセルした
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Reservation"
+        '422':
+          description: 開始済み・キャンセル済み
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/billing":
+    get:
+      summary: 月次の請求
+      tags:
+      - 請求
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: "^\\d{4}-\\d{2}$"
+        description: YYYY-MM（省略時は今月）
+      responses:
+        '200':
+          description: プラン料金・ドロップイン・予約の明細と合計
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Bill"
+        '400':
+          description: 月の形式が不正
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"

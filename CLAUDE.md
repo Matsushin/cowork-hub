@@ -6,24 +6,34 @@
 
 ## 構成
 - `backend/` Rails 8.1 APIモード＋MySQL 8.4。テストはRSpec（request spec中心）
-- `frontend/` Next.js 15 App Router＋Tailwind CSS v4＋shadcn/ui
+- `frontend/` Next.js 16 App Router＋Tailwind CSS v4＋shadcn/ui
 - `infra/` Terraform（ALB / ECS Fargate / RDS MySQL / ECR）
 
 ## 開発コマンド
 - バックエンドのテスト: `cd backend && bundle exec rspec && bin/rubocop`
-- フロントの検査: `cd frontend && npm run lint && npx tsc --noEmit`
+- フロントの検査: `cd frontend && npm run lint && npx tsc --noEmit && npm test`（単体テストはVitest。`src/**/*.test.ts(x)`）
+- E2E: `cd frontend && npm run test:e2e`（Playwright。`e2e/`。Rails・Next.jsが起動していなければ自動で起動する。seedのデータが必要）
 - Terraform: `terraform -chdir=infra fmt -recursive && terraform -chdir=infra validate`
 
 ## 実装の約束ごと
 - APIはすべて `/api` 配下。本番ではALBが `/api/*` をRailsへ振り分ける
 - 認証は `Authorization: Bearer <token>`（Sessionモデルのトークン）
 - バリデーションエラーは422で `{ error, errors: { 項目名: [メッセージ] } }` を返す
+- APIの仕様書は OpenAPI（`backend/swagger/v1/openapi.yaml`）。`spec/integration` のrswagのテストから生成し、レスポンスがスキーマどおりかも検証する。
+  スキーマ（`components.schemas`）は `spec/swagger_helper.rb` に書く。APIを追加・変更したら
+  1. `spec/integration` にテストを追加し、必要ならスキーマを直す
+  2. `cd backend && bin/rails rswag:specs:swaggerize` で仕様書を再生成
+  3. `cd frontend && npm run gen:api` で型（`src/lib/api-schema.ts`）を再生成。フロントは `lib/types.ts` の別名を使う
+  CIで、生成物がコミットされているかを確認している
 - フロントのデータ取得は Server Components（`lib/server/api.ts` の `apiFetch`）、更新は Server Actions（`app/actions/`）で行う。
   ブラウザからRails APIを直接呼ばない。クライアントコンポーネントは操作が必要な部分だけにする
 - 認証トークンは httpOnly Cookie（`lib/server/session.ts`）。ページの認可は `requireUser` / `requireAdmin`
-  - `src/middleware.ts` はCookieの有無だけを見て、未ログインならページ描画前に `/login?next=...` へ送る（最終確認は requireUser と Rails）。
+  - `src/proxy.ts`（旧middleware）はCookieの有無だけを見て、未ログインならページ描画前に `/login?next=...` へ送る（最終確認は requireUser と Rails）。
     ログインが必要なページを増やしたら `config.matcher` にも追加する
-- フォームは `useActionForm` ＋ `<FormErrors>` ＋ `<Field>`（子要素の name でその項目のエラーを表示）。
+- フォームは `useActionForm(action, { schema, defaultValues })` ＋ `<FormErrors>` ＋ `<Field>`（React Hook Form＋Zod）。
+  `<Field>` は子要素の name でReact Hook Formに登録し、その項目のエラー（ブラウザのチェック → Railsのエラー）を表示する。
+  初期値は `<Input defaultValue>` ではなく `defaultValues` で渡す。
+  スキーマは `lib/schemas.ts` に置き、Server Action側でも `parseInput` で同じスキーマを使って検証してからRailsへ送る。
   1クリックの操作は `ActionButton` に `.bind(null, id)` したServer Actionを渡す
 - 日時の表示は `lib/format.ts` を使う（サーバーはUTCなので、日本時間を明示している）
 - ドメインの関係：拠点（Location）→ スペース（Space）→ 予約（Reservation）。ドロップイン利用は Visit（会員×拠点）

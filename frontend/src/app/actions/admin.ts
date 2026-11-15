@@ -2,22 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/lib/api-error";
-import { success, tryApi } from "@/lib/server/action";
+import { adminUserSchema, locationSchema, spaceSchema } from "@/lib/schemas";
+import { parseInput, success, tryApi } from "@/lib/server/action";
 import { apiFetch } from "@/lib/server/api";
 
 // 権限チェックはRails側（Admin::BaseController）で行う
 
 export async function updateUser(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const planId = formData.get("plan_id");
+  const input = parseInput(adminUserSchema, formData);
+  if (!input.ok) return input.state;
+  const { role, plan_id } = input.data;
   const result = await tryApi(() =>
     apiFetch(`/admin/users/${id}`, {
       method: "PATCH",
-      body: {
-        user: {
-          role: formData.get("role"),
-          ...(planId ? { plan_id: planId } : {}),
-        },
-      },
+      body: { user: { role, ...(plan_id ? { plan_id } : {}) } },
     }),
   );
   if (!result.ok) return result.state;
@@ -27,15 +25,9 @@ export async function updateUser(id: number, _prev: ActionState, formData: FormD
 }
 
 export async function createLocation(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const keys = ["name", "prefecture", "address", "description", "open_hour", "close_hour", "hourly_price", "daily_max_price"];
-  const result = await tryApi(() =>
-    apiFetch("/admin/locations", {
-      method: "POST",
-      body: {
-        location: Object.fromEntries(keys.map((k) => [k, formData.get(k)])),
-      },
-    }),
-  );
+  const input = parseInput(locationSchema, formData);
+  if (!input.ok) return input.state;
+  const result = await tryApi(() => apiFetch("/admin/locations", { method: "POST", body: { location: input.data } }));
   if (!result.ok) return result.state;
   revalidatePath("/admin/locations");
   return success();
@@ -54,15 +46,9 @@ export async function setLocationActive(id: number, active: boolean): Promise<Ac
 }
 
 export async function createSpace(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const keys = ["location_id", "name", "kind", "capacity", "hourly_price"];
-  const result = await tryApi(() =>
-    apiFetch("/admin/spaces", {
-      method: "POST",
-      body: {
-        space: Object.fromEntries(keys.map((k) => [k, formData.get(k)])),
-      },
-    }),
-  );
+  const input = parseInput(spaceSchema, formData);
+  if (!input.ok) return input.state;
+  const result = await tryApi(() => apiFetch("/admin/spaces", { method: "POST", body: { space: input.data } }));
   if (!result.ok) return result.state;
   revalidatePath("/admin/spaces");
   return success();

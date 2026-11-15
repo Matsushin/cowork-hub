@@ -5,9 +5,10 @@ import { ErrorMessage, Field, FormErrors, useActionForm } from "@/components/for
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { signupSchema } from "@/lib/schemas";
 
 export function SignupForm() {
-  const { state, pending, onSubmit, errors } = useActionForm(signup);
+  const { state, pending, onSubmit, errors } = useActionForm(signup, { schema: signupSchema });
 
   return (
     <Card className="mx-auto max-w-sm px-5">

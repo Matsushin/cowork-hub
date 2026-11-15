@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { ApiError, toActionState, type ActionState } from "@/lib/api-error";
+import { z } from "zod";
+import { ApiError, toActionState, type ActionState, type FieldErrors } from "@/lib/api-error";
 import { clearSessionToken } from "./session";
 
 type Result<T> = { ok: true; data: T } | { ok: false; state: ActionState };
@@ -26,3 +27,22 @@ export async function tryApi<T>(fn: () => Promise<T>, { redirectOnUnauthorized =
 }
 
 export const success = (message: string | null = null): ActionState => ({ ok: true, message, fieldErrors: {} });
+
+/**
+ * FormData（またはオブジェクト）をZodスキーマで検証する
+ * ブラウザ側のチェックを通らずに直接呼ばれても、不正な値をRailsへ送らないための2重チェック
+ */
+export function parseInput<S extends z.ZodType>(schema: S, input: FormData | unknown): Result<z.output<S>> {
+  const raw = input instanceof FormData ? Object.fromEntries(input) : input;
+  const parsed = schema.safeParse(raw);
+  if (parsed.success) return { ok: true, data: parsed.data };
+  const { formErrors, fieldErrors } = z.flattenError(parsed.error);
+  return {
+    ok: false,
+    state: {
+      ok: false,
+      message: formErrors.length ? formErrors.join("\n") : "入力内容に誤りがあります。各項目を確認してください。",
+      fieldErrors: fieldErrors as FieldErrors,
+    },
+  };
+}

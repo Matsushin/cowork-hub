@@ -1,6 +1,9 @@
 "use client";
 
-import { cloneElement, createContext, isValidElement, startTransition, useActionState, useContext, useId, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { cloneElement, createContext, isValidElement, startTransition, useActionState, useContext, useEffect, useId, useState } from "react";
+import { useForm, type DefaultValues, type FieldValues, type Resolver, type UseFormReturn } from "react-hook-form";
+import type { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -8,15 +11,30 @@ import { initialActionState, type ActionState, type FieldErrors } from "@/lib/ap
 
 type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
 
-/**
- * Server Actionを使うフォームのためのフック
- * - onSubmit: フォームに渡す。送信後も入力内容を残すため、<form action> ではなく手動で送る
- * - errors: <FormErrors> に渡すと <Field name="..."> の下に項目ごとのエラーが出る
- */
-export function useActionForm(action: FormAction) {
-  const [state, dispatch, pending] = useActionState(action, initialActionState);
+type Options<S extends z.ZodType> = {
+  /** 入力チェックのスキーマ（lib/schemas.ts）。Server Action側でも同じものを使う */
+  schema: S;
+  /** 入力欄の初期値（<Input defaultValue> ではなくここで渡す） */
+  defaultValues?: Record<string, unknown>;
+  /** 成功したらフォームを初期値に戻す（追加フォームなど） */
+  resetOnSuccess?: boolean;
+};
 
-  // 入力し直した項目のエラーは消す（新しい結果が返ったらリセット）
+/**
+ * Server Actionを使うフォームのためのフック（React Hook Form＋Zod）
+ * - ブラウザでZodの入力チェックを行い、通ったときだけServer Actionへ送る
+ * - Rails側のエラー（重複など）は Server Action から fieldErrors として返り、同じ <Field> に表示される
+ * - onSubmit: <form onSubmit> に渡す / errors: <FormErrors> に渡す / form: React Hook Form 本体
+ */
+export function useActionForm<S extends z.ZodType>(action: FormAction, { schema, defaultValues, resetOnSuccess = false }: Options<S>) {
+  const [state, dispatch, pending] = useActionState(action, initialActionState);
+  const form = useForm<FieldValues>({
+    resolver: zodResolver(schema as never) as Resolver<FieldValues>,
+    defaultValues: defaultValues as DefaultValues<FieldValues>,
+    mode: "onTouched", // 一度触った項目は入力のたびにチェックし直す
+  });
+
+  // 入力し直した項目のサーバーエラーは消す（新しい結果が返ったらリセット）
   const [cleared, setCleared] = useState<string[]>([]);
   const [prevState, setPrevState] = useState(state);
   if (prevState !== state) {
@@ -24,23 +42,27 @@ export function useActionForm(action: FormAction) {
     setCleared([]);
   }
 
-  const fieldErrors: FieldErrors = Object.fromEntries(Object.entries(state.fieldErrors).filter(([k]) => !cleared.includes(k)));
+  useEffect(() => {
+    if (state.ok && resetOnSuccess) form.reset();
+  }, [state, resetOnSuccess, form]);
+
+  const serverErrors: FieldErrors = Object.fromEntries(Object.entries(state.fieldErrors).filter(([k]) => !cleared.includes(k)));
   const clearField = (name: string) => setCleared((c) => (c.includes(name) ? c : [...c, name]));
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+  // 送信後も入力内容を残すため、<form action> ではなくフォーム要素の値をそのまま送る（hidden項目も含む）
+  const onSubmit = form.handleSubmit((_values, e) => {
+    const formData = new FormData(e?.target as HTMLFormElement);
     startTransition(() => dispatch(formData));
-  };
+  });
 
-  return { state, pending, onSubmit, errors: { fieldErrors, clearField } };
+  return { state, pending, onSubmit, form, errors: { form, serverErrors, clearField } };
 }
 
-type FormErrorsValue = { fieldErrors: FieldErrors; clearField: (name: string) => void };
+type FormErrorsValue = { form: UseFormReturn<FieldValues>; serverErrors: FieldErrors; clearField: (name: string) => void };
 
 const FormErrorsContext = createContext<FormErrorsValue | null>(null);
 
-// 囲んだ範囲の <Field name="..."> に項目ごとのエラーを配る
+// 囲んだ範囲の <Field name="..."> を React Hook Form に登録し、項目ごとのエラーを配る
 export function FormErrors({ value, children }: { value: FormErrorsValue; children: React.ReactNode }) {
   return <FormErrorsContext.Provider value={value}>{children}</FormErrorsContext.Provider>;
 }
@@ -48,34 +70,50 @@ export function FormErrors({ value, children }: { value: FormErrorsValue; childr
 type InputLikeProps = {
   id?: string;
   name?: string;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
 };
 
 /**
- * ラベル付きの入力欄。errorKey（省略時は子要素のname）の項目エラーを下に表示する
+ * ラベル付きの入力欄
+ * 子要素の name で React Hook Form に登録し、その項目のエラー（ブラウザでのチェック → サーバーの順）を下に表示する。
+ * Rails が別名でエラーを返す項目（location_id → location など）は errorKey で指定する
+ *
+ * 注意：直下の子要素は入力要素1つにし、name を付ける（フラグメントや <div> で包むと登録されず、
+ * スキーマのエラーだけが残って表示先がないまま送信できなくなる）
  */
 export function Field({ label, errorKey, children }: { label: string; errorKey?: string; children: React.ReactNode }) {
   const ctx = useContext(FormErrorsContext);
   const id = useId();
   const child = isValidElement<InputLikeProps>(children) ? children : null;
-  const key = errorKey ?? child?.props.name;
-  const errors = key ? ctx?.fieldErrors[key] : undefined;
+  const name = child?.props.name;
+  if (process.env.NODE_ENV !== "production" && ctx && !name) {
+    console.warn(`<Field label="${label}"> の直下に name 付きの入力要素がないため、React Hook Form に登録されません`);
+  }
+
+  const clientError = name ? ctx?.form.formState.errors[name]?.message : undefined;
+  const serverError = [...(name ? (ctx?.serverErrors[name] ?? []) : []), ...(errorKey ? (ctx?.serverErrors[errorKey] ?? []) : [])];
+  const errors = typeof clientError === "string" ? [clientError] : serverError.length ? serverError : undefined;
   const errorId = `${id}-error`;
   const inputId = child?.props.id ?? id;
 
-  const control = child
-    ? cloneElement(child, {
-        id: inputId,
-        "aria-invalid": errors ? true : undefined,
-        "aria-describedby": errors ? errorId : undefined,
+  let control: React.ReactNode = children;
+  if (child) {
+    const registered = name && ctx ? ctx.form.register(name) : null;
+    control = cloneElement(child, {
+      id: inputId,
+      "aria-invalid": errors ? true : undefined,
+      "aria-describedby": errors ? errorId : undefined,
+      ...(registered && {
+        ...registered,
         onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-          if (key) ctx?.clearField(key);
-          child.props.onChange?.(e);
+          ctx?.clearField(name!);
+          if (errorKey) ctx?.clearField(errorKey);
+          return registered.onChange(e);
         },
-      })
-    : children;
+      }),
+    } as InputLikeProps);
+  }
 
   return (
     <div className="flex flex-col gap-1.5">

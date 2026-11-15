@@ -4,9 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-error";
 import { formatDate, formatDateTime, formatDuration, formatTime, yen } from "@/lib/format";
 import { apiFetch } from "@/lib/server/api";
-import type { Plan, Reservation, User, Visit } from "@/lib/types";
-
-type UserDetail = User & { reservations: Reservation[]; visits: Visit[] };
+import type { Plan, UserDetail } from "@/lib/types";
 
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
