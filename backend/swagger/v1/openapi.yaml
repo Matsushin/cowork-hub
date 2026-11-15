@@ -292,9 +292,16 @@ components:
         amount:
           type: integer
           nullable: true
+        auto_checked_out:
+          type: boolean
+          description: チェックアウトし忘れを閉店時刻で自動的に締めた利用か
         estimated_amount:
           type: integer
           description: 利用中のみ。今チェックアウトした場合の料金
+        auto_checkout_at:
+          type: string
+          format: date-time
+          description: 利用中のみ。チェックアウトし忘れた場合に自動で締める時刻（閉店時刻）
         duration_minutes:
           type: integer
         location:
@@ -314,6 +321,7 @@ components:
       - checked_in_at
       - checked_out_at
       - amount
+      - auto_checked_out
       - duration_minutes
       - location
     Bill:

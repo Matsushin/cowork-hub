@@ -1,3 +1,4 @@
+import { AutoCheckoutBadge } from "@/components/AutoCheckoutBadge";
 import { MonthNav } from "@/components/MonthNav";
 import { Card } from "@/components/ui/card";
 import { currentMonthInTokyo, formatDateTime, formatDuration, formatMonth, formatTime, yen } from "@/lib/format";
@@ -46,7 +47,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               <li key={v.id} className="flex justify-between gap-2 py-2">
                 <span>
                   {formatDateTime(v.checked_in_at)}〜{formatTime(v.checked_out_at!)}　{v.location.name}
-                  <span className="text-muted-foreground">（{formatDuration(v.duration_minutes)}）</span>
+                  <span className="text-muted-foreground">（{formatDuration(v.duration_minutes)}）</span>{" "}
+                  <AutoCheckoutBadge show={v.auto_checked_out} />
                 </span>
                 <span>{yen(v.amount ?? 0)}</span>
               </li>

@@ -41,6 +41,8 @@
 - ドメインの関係：拠点（Location）→ スペース（Space）→ 予約（Reservation）。ドロップイン利用は Visit（会員×拠点）
 - 予約の重複防止は `Reservation.reserve!` でスペース行をロックしてから確認する。料金（amount）もここで確定する
 - ドロップインは `Visit.check_in!`（会員行をロックして1拠点だけに制限）と `Visit#check_out!`（行をロックして料金を確定）で行う
+- チェックアウトし忘れは、チェックインした日の閉店時刻（`Visit#auto_checkout_at`）で締める（`auto_checked_out: true`）。
+  `Visit.auto_check_out_overdue!` を定期実行（`infra/scheduler.tf`）と、利用中かどうか・利用中の人数・料金を返すAPIの前で呼ぶ
 - 営業時間・ドロップイン料金は拠点ごと（`Location#open_at?` / `Location#drop_in_fee`）。定数で持たない
 - 月次の集計（請求 `MonthlyBill`・管理の売上）は `?month=YYYY-MM`（`MonthParam`）で受け取る
 - 画面の文言・エラーメッセージは日本語。UIはshadcn/uiのコンポーネントを使う
