@@ -5,6 +5,7 @@ module Admin
 
     def index
       month = month_param
+      Visit.auto_check_out_overdue! # 締め忘れの利用も売上に含める
       range = month.in_time_zone.all_month
       visits = Visit.finished.where(checked_in_at: range).group(:location_id)
       visit_counts = visits.count

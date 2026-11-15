@@ -7,6 +7,7 @@ module Admin
 
     def show
       user = User.find(params[:id])
+      Visit.auto_check_out_overdue!(user.visits)
       render json: UserSerializer.call(user).merge(
         reservations: user.reservations.includes(space: :location).order(starts_at: :desc).limit(50).map { |r| ReservationSerializer.call(r) },
         visits: user.visits.includes(:location).order(checked_in_at: :desc).limit(50).map { |v| VisitSerializer.call(v) }

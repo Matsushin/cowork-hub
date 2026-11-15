@@ -1,4 +1,5 @@
 require "rails_helper"
+require "rake"
 
 RSpec.describe "ドロップイン（入退室）", type: :request do
   include ActiveSupport::Testing::TimeHelpers
@@ -106,5 +107,89 @@ RSpec.describe "ドロップイン（入退室）", type: :request do
     create(:visit, location:)
     get "/api/visits", headers: auth_headers(user)
     expect(json.map { |v| v["id"] }).to eq [ Visit.last(2).first.id, old.id ]
+  end
+
+  describe "チェックアウトし忘れ（閉店時刻で自動チェックアウト）" do
+    # 9:00〜21:00、300円/時・上限1500円。10:00にチェックイン
+    def checked_in_visit
+      check_in
+      Visit.find(json["id"])
+    end
+
+    it "閉店後にチェックアウトすると、閉店時刻までの料金で自動チェックアウト扱いになる" do
+      visit = checked_in_visit
+      travel 2.days
+      check_out(visit.id)
+      expect(response).to have_http_status(:ok)
+      expect(json).to include("auto_checked_out" => true, "amount" => 1500)
+      expect(Time.zone.parse(json["checked_out_at"])).to eq now.change(hour: 21)
+    end
+
+    it "閉店時刻より前のチェックアウトは通常どおり" do
+      visit = checked_in_visit
+      travel 1.hour
+      check_out(visit.id)
+      expect(json).to include("auto_checked_out" => false, "amount" => 300)
+    end
+
+    it "閉店時刻ちょうどのチェックアウトは自動扱い（料金は同じ）" do
+      visit = checked_in_visit
+      travel 11.hours
+      check_out(visit.id)
+      expect(json).to include("auto_checked_out" => true, "duration_minutes" => 11 * 60)
+    end
+
+    it "閉店後に利用状況を開くと、利用中ではなく履歴に入っている" do
+      visit = checked_in_visit
+      travel 12.hours
+      get "/api/visits/current", headers: auth_headers(user)
+      expect(json).to be_nil
+      get "/api/visits", headers: auth_headers(user)
+      expect(json.first).to include("id" => visit.id, "auto_checked_out" => true, "amount" => 1500)
+    end
+
+    it "締め忘れがあっても、翌日は別の拠点にチェックインできる" do
+      checked_in_visit
+      travel 1.day
+      check_in(target: create(:location))
+      expect(response).to have_http_status(:created)
+      expect(user.visits.in_progress.count).to eq 1
+    end
+
+    it "利用中は自動チェックアウトの予定時刻を返す" do
+      checked_in_visit
+      get "/api/visits/current", headers: auth_headers(user)
+      expect(Time.zone.parse(json["auto_checkout_at"])).to eq now.change(hour: 21)
+    end
+
+    it "拠点の利用中の人数に、閉店後の締め忘れを数えない" do
+      checked_in_visit
+      travel 12.hours
+      get "/api/locations/#{location.id}"
+      expect(json["current_visitors"]).to eq 0
+    end
+
+    it "24時閉店の拠点は、翌日0時で締める" do
+      late = create(:location, open_hour: 9, close_hour: 24)
+      check_in(target: late)
+      id = json["id"]
+      travel 1.day
+      check_out(id)
+      expect(Time.zone.parse(json["checked_out_at"])).to eq now.tomorrow.beginning_of_day
+    end
+
+    it "定期実行のタスクで、閉店済みの利用だけを締める" do
+      overdue = checked_in_visit
+      other_user = create(:user)
+      open_later = create(:location, open_hour: 9, close_hour: 23)
+      travel 11.5.hours # 21:30。location は閉店済み、open_later はまだ営業中
+      still_open = create(:visit, user: other_user, location: open_later, checked_in_at: now.change(hour: 21))
+
+      Rails.application.load_tasks unless Rake::Task.task_defined?("visits:auto_check_out")
+      expect { Rake::Task["visits:auto_check_out"].execute }.to output(/1件/).to_stdout
+
+      expect(overdue.reload).to have_attributes(auto_checked_out: true, checked_out_at: now.change(hour: 21))
+      expect(still_open.reload.checked_out_at).to be_nil
+    end
   end
 end
