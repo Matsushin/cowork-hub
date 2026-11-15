@@ -1,5 +1,11 @@
 class ApplicationController < ActionController::API
   include Authentication
+  include Pundit::Authorization # pundit_user は Authentication の current_user を使う
+
+  # 権限がない操作は403
+  rescue_from Pundit::NotAuthorizedError do |e|
+    render json: { error: e.policy.error_message }, status: :forbidden
+  end
 
   rescue_from ActiveRecord::RecordNotFound do
     render json: { error: "見つかりません" }, status: :not_found

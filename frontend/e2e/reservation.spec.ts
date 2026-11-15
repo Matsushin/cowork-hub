@@ -29,8 +29,11 @@ test("拠点を選んで会議室・席を予約し、予約一覧からキャ�
   const row = page.locator("div", { hasText: `フリー席B` }).filter({ hasText: time }).filter({ has: page.getByRole("button", { name: "キャンセル" }) }).last();
   await expect(row).toBeVisible();
 
-  // キャンセル（確認ダイアログでOK）
-  page.once("dialog", (dialog) => dialog.accept());
+  // キャンセル（確認ダイアログで「キャンセルする」）→ 通知が出て一覧から消える
   await row.getByRole("button", { name: "キャンセル" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("この予約をキャンセルしますか？");
+  await dialog.getByRole("button", { name: "キャンセルする" }).click();
+  await expect(page.getByText("予約をキャンセルしました")).toBeVisible();
   await expect(row).toBeHidden();
 });

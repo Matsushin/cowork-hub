@@ -23,7 +23,7 @@ export async function checkOut(visitId: number): Promise<ActionState> {
   const result = await tryApi(() => apiFetch(`/visits/${visitId}/checkout`, { method: "PATCH" }));
   if (!result.ok) return result.state;
   revalidatePath("/", "layout");
-  return success();
+  return success("チェックアウトしました");
 }
 
 export async function createReservation(params: { space_id: number; starts_at: string; ends_at: string }): Promise<ActionState> {
@@ -39,7 +39,7 @@ export async function cancelReservation(id: number): Promise<ActionState> {
   const result = await tryApi(() => apiFetch(`/reservations/${id}/cancel`, { method: "PATCH" }));
   if (!result.ok) return result.state;
   revalidatePath("/reservations");
-  return success();
+  return success("予約をキャンセルしました");
 }
 
 export async function updateProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {

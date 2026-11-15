@@ -30,7 +30,7 @@ export async function createLocation(_prev: ActionState, formData: FormData): Pr
   const result = await tryApi(() => apiFetch("/admin/locations", { method: "POST", body: { location: input.data } }));
   if (!result.ok) return result.state;
   revalidatePath("/admin/locations");
-  return success();
+  return success("拠点を追加しました");
 }
 
 export async function setLocationActive(id: number, active: boolean): Promise<ActionState> {
@@ -42,7 +42,7 @@ export async function setLocationActive(id: number, active: boolean): Promise<Ac
   );
   if (!result.ok) return result.state;
   revalidatePath("/admin/locations");
-  return success();
+  return success(active ? "公開しました" : "非公開にしました");
 }
 
 export async function createSpace(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -51,7 +51,7 @@ export async function createSpace(_prev: ActionState, formData: FormData): Promi
   const result = await tryApi(() => apiFetch("/admin/spaces", { method: "POST", body: { space: input.data } }));
   if (!result.ok) return result.state;
   revalidatePath("/admin/spaces");
-  return success();
+  return success("スペースを追加しました");
 }
 
 export async function setSpaceActive(id: number, active: boolean): Promise<ActionState> {
@@ -63,12 +63,12 @@ export async function setSpaceActive(id: number, active: boolean): Promise<Actio
   );
   if (!result.ok) return result.state;
   revalidatePath("/admin/spaces");
-  return success();
+  return success(active ? "公開しました" : "非公開にしました");
 }
 
 export async function deleteSpace(id: number): Promise<ActionState> {
   const result = await tryApi(() => apiFetch(`/admin/spaces/${id}`, { method: "DELETE" }));
   if (!result.ok) return result.state;
   revalidatePath("/admin/spaces");
-  return success();
+  return success("削除しました");
 }

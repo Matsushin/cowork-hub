@@ -18,6 +18,10 @@
 ## 実装の約束ごと
 - APIはすべて `/api` 配下。本番ではALBが `/api/*` をRailsへ振り分ける
 - 認証は `Authorization: Bearer <token>`（Sessionモデルのトークン）
+- 権限チェックはPundit（`app/policies/`）。見てよい範囲は `policy_scope`、1件への操作は `authorize` で確認する
+  - 他人のレコードは `policy_scope(...).find` で404にする（存在を知られないため403にしない）
+  - 管理APIは `Admin::BaseController` の `authorize :admin, :access?`（AdminPolicy）。許可されなければ403
+  - 予約のキャンセル可否（開始前か）などの業務ルールはPolicyに入れず、モデルで判定して422を返す
 - バリデーションエラーは422で `{ error, errors: { 項目名: [メッセージ] } }` を返す
 - APIの仕様書は OpenAPI（`backend/swagger/v1/openapi.yaml`）。`spec/integration` のrswagのテストから生成し、レスポンスがスキーマどおりかも検証する。
   スキーマ（`components.schemas`）は `spec/swagger_helper.rb` に書く。APIを追加・変更したら
@@ -34,7 +38,8 @@
   `<Field>` は子要素の name でReact Hook Formに登録し、その項目のエラー（ブラウザのチェック → Railsのエラー）を表示する。
   初期値は `<Input defaultValue>` ではなく `defaultValues` で渡す。
   スキーマは `lib/schemas.ts` に置き、Server Action側でも `parseInput` で同じスキーマを使って検証してからRailsへ送る。
-  1クリックの操作は `ActionButton` に `.bind(null, id)` したServer Actionを渡す
+  1クリックの操作は `ActionButton` に `.bind(null, id)` したServer Actionを渡す。取り消せない操作は `confirm` で確認ダイアログを出す
+- 操作の結果は通知（Sonnerのトースト）で知らせる。成功時の文言は Server Action の `success("...")` で返す（フォームのエラーは従来どおり欄の下）
 - 日時の表示は `lib/format.ts` を使う（サーバーはUTCなので、日本時間を明示している）
 - ドメインの関係：拠点（Location）→ スペース（Space）→ 予約（Reservation）。ドロップイン利用は Visit（会員×拠点）
 - 予約の重複防止は `Reservation.reserve!` でスペース行をロックしてから確認する。料金（amount）もここで確定する

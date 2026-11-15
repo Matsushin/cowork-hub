@@ -47,7 +47,12 @@ export default async function AdminSpacesPage() {
                   <ActionButton
                     variant="destructive"
                     action={deleteSpace.bind(null, s.id)}
-                    confirmMessage={`${s.name}を削除しますか？`}
+                    confirm={{
+                      title: `${s.name}を削除しますか？`,
+                      description: "予約があるスペースは削除できません。使わなくなった場合は「非公開」にしてください。",
+                      actionLabel: "削除する",
+                      destructive: true,
+                    }}
                   >
                     削除
                   </ActionButton>
