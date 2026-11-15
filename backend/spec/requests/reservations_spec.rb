@@ -58,10 +58,16 @@ RSpec.describe "予約", type: :request do
     expect(json["error"]).to include "上限"
   end
 
-  it "他人の予約はキャンセルできない" do
+  it "他人の予約はキャンセルできず、メールも送らない" do
     other = create(:reservation)
-    patch "/api/reservations/#{other.id}/cancel", headers: auth_headers(user)
+    expect { patch "/api/reservations/#{other.id}/cancel", headers: auth_headers(user) }.not_to have_enqueued_mail
     expect(response).to have_http_status(:not_found)
+  end
+
+  it "キャンセル済みの予約は再度キャンセルできず（422）、メールも送らない" do
+    canceled = create(:reservation, user:, space:, status: :canceled)
+    expect { patch "/api/reservations/#{canceled.id}/cancel", headers: auth_headers(user) }.not_to have_enqueued_mail
+    expect(response).to have_http_status(:unprocessable_content)
   end
 
   it "空き状況では他人の予約が mine=false で返る" do
