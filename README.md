@@ -33,7 +33,7 @@ Claude Codeの学習用に、Rails API＋Next.jsで作り、AWS（ECS Fargate）
 
 ```
 backend/    Rails 8.1（APIモード）＋MySQL 8.4、RSpec
-frontend/   Next.js 15（App Router・Server Components）＋Tailwind CSS v4＋shadcn/ui
+frontend/   Next.js 16（App Router・Server Components）＋Tailwind CSS v4＋shadcn/ui
 infra/      Terraform（VPC / ALB / ECS Fargate / RDS MySQL / ECR）
 bin/        デプロイ・seed用スクリプト
 ```

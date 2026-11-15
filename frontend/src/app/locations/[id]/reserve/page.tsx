@@ -6,6 +6,10 @@ import { apiFetch } from "@/lib/server/api";
 import { requireUser } from "@/lib/server/session";
 import type { Availability, Location, Space } from "@/lib/types";
 
+// リクエストを受けた時刻。Server Componentはリクエストごとに1回だけ描画されるので、
+// 描画中に時刻を取っても結果がぶれない（React Compilerのルールは純粋関数を求めるため関数に分けている）
+const requestTime = () => Date.now();
+
 export default async function ReservePage({
   params,
   searchParams,
@@ -36,7 +40,7 @@ export default async function ReservePage({
       location={location}
       date={date}
       today={today}
-      now={Date.now()}
+      now={requestTime()}
       spaces={spaces}
       availability={availability}
     />
