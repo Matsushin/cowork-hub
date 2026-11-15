@@ -43,6 +43,8 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
               {yen(location.daily_max_price)}まで）
               <br />
               <span className="text-muted-foreground">月額プランの方は無料</span>
+              <br />
+              <span className="text-muted-foreground">チェックアウトし忘れた場合は、閉店時刻で自動的にチェックアウトします</span>
             </dd>
             <dt className="text-muted-foreground">利用中</dt>
             <dd>{location.current_visitors}人</dd>

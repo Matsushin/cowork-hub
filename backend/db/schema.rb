@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_15_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_15_000003) do
   create_table "locations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "prefecture", null: false
@@ -104,6 +104,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_15_000002) do
     t.integer "amount"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "auto_checked_out", default: false, null: false
     t.index ["location_id", "checked_in_at"], name: "index_visits_on_location_id_and_checked_in_at"
     t.index ["location_id"], name: "index_visits_on_location_id"
     t.index ["user_id", "checked_out_at"], name: "index_visits_on_user_id_and_checked_out_at"
