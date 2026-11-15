@@ -119,3 +119,13 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false
       - run: terraform validate
+
+  # 本番用のDockerイメージがビルドできるか（ベースイメージの更新漏れ・Dockerfileの誤りを検出する。pushはしない）
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --tag cowork-hub-${{ matrix.app }}:ci ${{ matrix.app }}
