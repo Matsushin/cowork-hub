@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { checkOut } from "@/app/actions/member";
+import { AutoCheckoutBadge } from "@/components/AutoCheckoutBadge";
 import { ActionButton } from "@/components/form";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,6 +29,11 @@ export default async function VisitsPage() {
               {formatDateTime(current.checked_in_at)}から {formatDuration(current.duration_minutes)}経過・現在の料金{" "}
               {yen(current.estimated_amount ?? 0)}
             </p>
+            {current.auto_checkout_at && (
+              <p className="text-xs text-muted-foreground">
+                チェックアウトし忘れた場合は、閉店時刻（{formatTime(current.auto_checkout_at)}）に自動でチェックアウトします
+              </p>
+            )}
           </div>
           <ActionButton
             action={checkOut.bind(null, current.id)}
@@ -73,7 +79,10 @@ export default async function VisitsPage() {
                     {formatDateTime(v.checked_in_at)}〜{formatTime(v.checked_out_at!)}
                   </TableCell>
                   <TableCell className="px-4">{v.location.name}</TableCell>
-                  <TableCell className="px-4">{formatDuration(v.duration_minutes)}</TableCell>
+                  <TableCell className="space-x-2 px-4">
+                    <span>{formatDuration(v.duration_minutes)}</span>
+                    <AutoCheckoutBadge show={v.auto_checked_out} />
+                  </TableCell>
                   <TableCell className="px-4 text-right">{yen(v.amount ?? 0)}</TableCell>
                 </TableRow>
               ))}

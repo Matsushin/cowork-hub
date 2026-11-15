@@ -1464,8 +1464,15 @@ export interface components {
             /** Format: date-time */
             checked_out_at: string | null;
             amount: number | null;
+            /** @description チェックアウトし忘れを閉店時刻で自動的に締めた利用か */
+            auto_checked_out: boolean;
             /** @description 利用中のみ。今チェックアウトした場合の料金 */
             estimated_amount?: number;
+            /**
+             * Format: date-time
+             * @description 利用中のみ。チェックアウトし忘れた場合に自動で締める時刻（閉店時刻）
+             */
+            auto_checkout_at?: string;
             duration_minutes: number;
             location: {
                 id: number;

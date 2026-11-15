@@ -165,12 +165,14 @@ RSpec.configure do |config|
               checked_in_at: datetime,
               checked_out_at: nullable.(datetime),
               amount: nullable.({ type: :integer }),
+              auto_checked_out: { type: :boolean, description: "チェックアウトし忘れを閉店時刻で自動的に締めた利用か" },
               estimated_amount: { type: :integer, description: "利用中のみ。今チェックアウトした場合の料金" },
+              auto_checkout_at: datetime.merge(description: "利用中のみ。チェックアウトし忘れた場合に自動で締める時刻（閉店時刻）"),
               duration_minutes: { type: :integer },
               location: id_name,
               user: ref.("UserSummary")
             },
-            required: %w[id checked_in_at checked_out_at amount duration_minutes location]
+            required: %w[id checked_in_at checked_out_at amount auto_checked_out duration_minutes location]
           },
           Bill: {
             type: :object,
