@@ -4,7 +4,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneElement, createContext, isValidElement, startTransition, useActionState, useContext, useEffect, useId, useState } from "react";
 import { useForm, type DefaultValues, type FieldValues, type Resolver, type UseFormReturn } from "react-hook-form";
 import type { z } from "zod";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { initialActionState, type ActionState, type FieldErrors } from "@/lib/api-error";
@@ -42,8 +53,11 @@ export function useActionForm<S extends z.ZodType>(action: FormAction, { schema,
     setCleared([]);
   }
 
+  // 成功したら通知を出し、必要なら入力欄を初期値に戻す
   useEffect(() => {
-    if (state.ok && resetOnSuccess) form.reset();
+    if (!state.ok) return;
+    if (state.message) toast.success(state.message);
+    if (resetOnSuccess) form.reset();
   }, [state, resetOnSuccess, form]);
 
   const serverErrors: FieldErrors = Object.fromEntries(Object.entries(state.fieldErrors).filter(([k]) => !cleared.includes(k)));
@@ -139,45 +153,72 @@ export function ErrorMessage({ message }: { message: string | null | undefined }
   );
 }
 
-/** フォームの送信結果（成功メッセージ or エラー）を表示する */
+/** フォームの送信エラーを表示する（成功は useActionForm が通知で知らせる） */
 export function FormStatus({ state }: { state: ActionState }) {
-  if (state.ok) return state.message ? <p className="text-sm text-primary">{state.message}</p> : null;
-  return <ErrorMessage message={state.message} />;
+  return state.ok ? null : <ErrorMessage message={state.message} />;
 }
 
 /**
  * 1クリックでServer Actionを実行するボタン（キャンセル・削除など）
- * action は Server Component 側で .bind(null, id) して渡す
+ * - action は Server Component 側で .bind(null, id) して渡す
+ * - confirm を渡すと、実行前に確認ダイアログ（AlertDialog）を出す
+ * - 結果は画面上部の通知（トースト）で知らせる。成功時の文言は Server Action の success("...") で返す
  */
 export function ActionButton({
   action,
-  confirmMessage,
+  confirm,
   children,
   ...buttonProps
 }: {
   action: () => Promise<ActionState>;
-  confirmMessage?: string;
+  confirm?: {
+    title: string;
+    description?: string;
+    /** 実行ボタンの文言（例：「キャンセルする」「削除する」） */
+    actionLabel: string;
+    /** 取り消せない操作なら赤いボタンにする */
+    destructive?: boolean;
+  };
 } & Omit<React.ComponentProps<typeof Button>, "action" | "onClick">) {
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   const run = () => {
-    if (confirmMessage && !confirm(confirmMessage)) return;
-    setError(null);
+    setOpen(false);
     setPending(true);
     startTransition(async () => {
       const result = await action();
-      if (!result.ok) setError(result.message);
+      if (!result.ok) toast.error(result.message ?? "エラーが発生しました");
+      else if (result.message) toast.success(result.message);
       setPending(false);
     });
   };
 
+  const button = (
+    <Button {...buttonProps} disabled={pending || buttonProps.disabled} onClick={confirm ? () => setOpen(true) : run}>
+      {children}
+    </Button>
+  );
+  if (!confirm) return button;
+
   return (
-    <span className="inline-flex flex-col items-end gap-1">
-      <Button {...buttonProps} disabled={pending || buttonProps.disabled} onClick={run}>
-        {children}
-      </Button>
-      {error && <span className="text-xs text-destructive">{error}</span>}
-    </span>
+    <>
+      {button}
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirm.title}</AlertDialogTitle>
+            {confirm.description && <AlertDialogDescription>{confirm.description}</AlertDialogDescription>}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            {/* 「キャンセル」は予約のキャンセルと紛らわしいので「戻る」にする */}
+            <AlertDialogCancel>戻る</AlertDialogCancel>
+            <AlertDialogAction variant={confirm.destructive ? "destructive" : "default"} onClick={run}>
+              {confirm.actionLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
