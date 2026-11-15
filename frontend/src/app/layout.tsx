@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/Header";
+import { Toaster } from "@/components/ui/sonner";
 import { apiFetch } from "@/lib/server/api";
 import { getCurrentUser } from "@/lib/server/session";
 import type { Visit } from "@/lib/types";
@@ -19,6 +20,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen antialiased">
         <Header user={user} currentVisit={currentVisit} />
         <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );

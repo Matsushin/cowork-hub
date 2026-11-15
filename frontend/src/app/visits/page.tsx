@@ -31,7 +31,11 @@ export default async function VisitsPage() {
           </div>
           <ActionButton
             action={checkOut.bind(null, current.id)}
-            confirmMessage={`${current.location.name}からチェックアウトしますか？`}
+            confirm={{
+              title: `${current.location.name}からチェックアウトしますか？`,
+              description: `現在の料金は${yen(current.estimated_amount ?? 0)}です。チェックアウトすると料金が確定します。`,
+              actionLabel: "チェックアウトする",
+            }}
           >
             チェックアウト
           </ActionButton>
