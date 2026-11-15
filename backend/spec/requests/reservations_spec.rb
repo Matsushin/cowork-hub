@@ -14,15 +14,15 @@ RSpec.describe "予約", type: :request do
     }
   end
 
-  it "予約を作成できる" do
-    reserve(from: 10, to: 12)
+  it "予約を作成すると、確認メールを非同期で送る" do
+    expect { reserve(from: 10, to: 12) }.to have_enqueued_mail(ReservationMailer, :confirmed)
     expect(response).to have_http_status(:created)
     expect(json.dig("space", "id")).to eq space.id
   end
 
-  it "同じスペースの重なる時間帯は409で拒否される" do
+  it "同じスペースの重なる時間帯は409で拒否され、メールも送らない" do
     reserve(from: 10, to: 12)
-    reserve(from: 11, to: 13, as: create(:user))
+    expect { reserve(from: 11, to: 13, as: create(:user)) }.not_to have_enqueued_mail
     expect(response).to have_http_status(:conflict)
   end
 
@@ -34,9 +34,11 @@ RSpec.describe "予約", type: :request do
     expect(response).to have_http_status(:created)
   end
 
-  it "キャンセル済みの枠は再度予約できる" do
+  it "キャンセル済みの枠は再度予約できる（キャンセル時もメールを送る）" do
     reserve(from: 10, to: 12)
-    patch "/api/reservations/#{json['id']}/cancel", headers: auth_headers(user)
+    expect {
+      patch "/api/reservations/#{json['id']}/cancel", headers: auth_headers(user)
+    }.to have_enqueued_mail(ReservationMailer, :canceled)
     expect(json["status"]).to eq "canceled"
     reserve(from: 10, to: 12, as: create(:user))
     expect(response).to have_http_status(:created)

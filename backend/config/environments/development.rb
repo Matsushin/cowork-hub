@@ -31,6 +31,13 @@ Rails.application.configure do
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 
+  # 送ったメールはブラウザで開く（実際には送信しない）
+  config.action_mailer.delivery_method = :letter_opener
+  config.action_mailer.perform_deliveries = true
+
+  # 非同期処理は本番と同じSolid Queueで動かす（Pumaの中でワーカーも起動する。config/puma.rb）
+  config.active_job.queue_adapter = :solid_queue
+
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
 

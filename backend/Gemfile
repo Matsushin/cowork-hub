@@ -14,6 +14,9 @@ gem "puma", ">= 5.0"
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"
 
+# メール送信などの非同期処理（DBをキューとして使うので Redis が不要）
+gem "solid_queue"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
@@ -45,4 +48,9 @@ group :development, :test do
   gem "factory_bot_rails"
   # request specからOpenAPIの仕様書（swagger/v1/openapi.yaml）を生成し、レスポンスがスキーマどおりかも検証する
   gem "rswag-specs"
+end
+
+group :development do
+  # 送ったメールをブラウザで開いて確認する
+  gem "letter_opener"
 end

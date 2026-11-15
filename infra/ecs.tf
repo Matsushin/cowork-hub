@@ -109,6 +109,11 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "DB_USERNAME", value = aws_db_instance.main.username },
       { name = "RAILS_LOG_LEVEL", value = "info" },
       { name = "SEED_ADMIN_EMAIL", value = "admin@example.com" },
+      # Solid Queue のワーカーをPumaの中で動かす（メール送信などの非同期処理）
+      { name = "SOLID_QUEUE_IN_PUMA", value = "true" },
+      # メール本文のリンク先
+      { name = "APP_URL", value = local.app_origin },
+      # SMTP_ADDRESS などを渡すまでメールは実際には送られない（config/environments/production.rb）
     ]
     secrets = [
       { name = "DB_PASSWORD", valueFrom = "${local.db_secret_arn}:password::" },
