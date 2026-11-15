@@ -10,9 +10,12 @@
 - `infra/` Terraform（ALB / ECS Fargate / RDS MySQL / ECR）
 
 ## 開発コマンド
-- バックエンドのテスト: `cd backend && bundle exec rspec && bin/rubocop`
+- 開発環境：バックエンド（Rails・MySQL・Mailpit）は Docker（`docker compose up -d`）、フロントエンドは手元で `npm run dev`
+  - Railsのコマンドはコンテナで実行する：`docker compose exec backend bin/rails ...`
+  - 開発環境のメールは Mailpit（http://localhost:8025）に届く
+- バックエンドのテスト: `docker compose exec backend bundle exec rspec && docker compose exec backend bin/rubocop`
 - フロントの検査: `cd frontend && npm run lint && npx tsc --noEmit && npm test`（単体テストはVitest。`src/**/*.test.ts(x)`）
-- E2E: `cd frontend && npm run test:e2e`（Playwright。`e2e/`。Rails・Next.jsが起動していなければ自動で起動する。seedのデータが必要）
+- E2E: `cd frontend && npm run test:e2e`（Playwright。`e2e/`。`docker compose up -d` でRailsを起動しておく。Next.jsは起動していなければ自動で起動する。seedのデータが必要）
 - Terraform: `terraform -chdir=infra fmt -recursive && terraform -chdir=infra validate`
 
 ## 実装の約束ごと

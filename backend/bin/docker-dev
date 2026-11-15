@@ -1,0 +1,14 @@
+#!/bin/bash -e
+# 開発用コンテナの起動処理（compose.yml の backend サービス）
+
+# Gemfile が変わっていたら入れ直す（gemはボリュームにあるので、イメージを作り直さなくてよい）
+bundle check >/dev/null || bundle install
+
+# 前回のコンテナが残したpidファイルがあると起動できないので消す
+rm -f tmp/pids/server.pid
+
+# DBがなければ作成し、マイグレーションを実行する（テスト用DBも作っておく）
+bin/rails db:prepare
+RAILS_ENV=test bin/rails db:prepare
+
+exec bin/rails server -b 0.0.0.0 -p 3000

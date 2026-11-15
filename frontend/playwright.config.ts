@@ -3,7 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * 画面を通した動作確認（E2E）
  * Rails API（:3001）と Next.js（:3000）を起動し、seed のデータ・テストアカウントで操作する。
- * ローカルですでにサーバーを起動していればそれを使う。
+ * ローカルでは docker compose up -d で起動したRailsを使う（起動済みのサーバーはそのまま使う）。
+ * CIではRailsもこの設定で直接起動する。
  *
  *   npx playwright install chromium   … 初回のみ
  *   npm run test:e2e

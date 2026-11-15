@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+# 開発用のイメージ（compose.yml の backend サービスで使う）
+# 本番用は Dockerfile。こちらはソースをボリュームでマウントし、gemはボリュームにキャッシュする
+
+ARG RUBY_VERSION=4.0.9
+FROM docker.io/library/ruby:$RUBY_VERSION-slim
+
+WORKDIR /rails
+
+# gemのビルドとMySQL接続に必要なパッケージ
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential default-libmysqlclient-dev default-mysql-client git libyaml-dev pkg-config curl && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# RAILS_ENV は指定しない（未指定ならdevelopment。rspec は自動で test になる）
+ENV BUNDLE_PATH="/usr/local/bundle"
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+EXPOSE 3000
+CMD ["bin/docker-dev"]
