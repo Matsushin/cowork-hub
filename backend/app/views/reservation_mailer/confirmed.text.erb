@@ -1,0 +1,14 @@
+<%= @reservation.user.name %> 様
+
+ee-office（ええオフィス）をご利用いただきありがとうございます。
+以下の内容でご予約を承りました。
+
+■ 拠点　　：<%= @reservation.space.location.name %>（<%= @reservation.space.location.address %>）
+■ スペース：<%= @reservation.space.name %>
+■ 日時　　：<%= reservation_period(@reservation) %>
+■ 料金　　：<%= yen(@reservation.amount) %>（月次の請求に含まれます）
+
+ご予約の確認・キャンセルは、以下の予約一覧から行えます（開始時刻まで）。
+<%= reservations_url %>
+
+※このメールは送信専用です。

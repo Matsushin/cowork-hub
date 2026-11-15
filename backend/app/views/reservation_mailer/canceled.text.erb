@@ -1,0 +1,12 @@
+<%= @reservation.user.name %> 様
+
+以下のご予約をキャンセルしました。料金は請求されません。
+
+■ 拠点　　：<%= @reservation.space.location.name %>
+■ スペース：<%= @reservation.space.name %>
+■ 日時　　：<%= reservation_period(@reservation) %>
+
+またのご利用をお待ちしております。
+<%= reservations_url %>
+
+※このメールは送信専用です。

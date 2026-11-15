@@ -18,6 +18,7 @@ class ReservationsController < ApplicationController
       starts_at: Time.zone.parse(attrs[:starts_at].to_s),
       ends_at: Time.zone.parse(attrs[:ends_at].to_s)
     )
+    ReservationMailer.with(reservation:).confirmed.deliver_later
     render json: ReservationSerializer.call(reservation), status: :created
   rescue Reservation::Conflict => e
     render json: { error: e.message }, status: :conflict
@@ -31,6 +32,7 @@ class ReservationsController < ApplicationController
       return render json: { error: "この予約はキャンセルできません" }, status: :unprocessable_content
     end
     reservation.canceled!
+    ReservationMailer.with(reservation:).canceled.deliver_later
     render json: ReservationSerializer.call(reservation)
   end
 end
