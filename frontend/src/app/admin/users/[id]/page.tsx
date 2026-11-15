@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AutoCheckoutBadge } from "@/components/AutoCheckoutBadge";
 import { UserForm } from "@/components/admin/UserForm";
 import { Card } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-error";
@@ -38,7 +39,8 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                   {formatDateTime(v.checked_in_at)}〜{v.checked_out_at ? formatTime(v.checked_out_at) : "利用中"}　
                   {v.location.name}
                 </span>
-                <span className="text-muted-foreground">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <AutoCheckoutBadge show={v.auto_checked_out} />
                   {formatDuration(v.duration_minutes)}・{v.amount === null ? "—" : yen(v.amount)}
                 </span>
               </li>

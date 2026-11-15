@@ -1,6 +1,7 @@
 module Admin
   class LocationsController < BaseController
     def index
+      Visit.auto_check_out_overdue!
       locations = Location.order(:prefecture, :name)
       visitors = Visit.in_progress.group(:location_id).count
       render json: locations.map { |l| LocationSerializer.call(l, current_visitors: visitors.fetch(l.id, 0)) }

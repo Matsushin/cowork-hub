@@ -1,4 +1,8 @@
 class VisitsController < ApplicationController
+  # チェックアウトし忘れを締めてから返す（定期実行の合間でも、閉店後に「利用中」のまま見えないように）
+  # checkout は check_out! 自身が閉店時刻で締めるので対象外（先に締めると「チェックアウト済み」エラーになる）
+  before_action -> { Visit.auto_check_out_overdue!(current_user.visits) }, only: %i[index current]
+
   def index
     visits = current_user.visits.includes(:location).order(checked_in_at: :desc).limit(100)
     render json: visits.map { |v| VisitSerializer.call(v) }
