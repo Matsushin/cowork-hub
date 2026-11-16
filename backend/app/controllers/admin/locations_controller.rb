@@ -18,6 +18,20 @@ module Admin
       render json: LocationSerializer.call(location)
     end
 
+    # 受付用QRのコード。expires_in（残り秒数）はサーバーの時刻で計算して返す（タブレットの時計のずれに左右されないように）
+    def checkin_code
+      location = Location.find(params[:id])
+      now = Time.current
+      result = CheckinCode.generate(location, at: now)
+      render json: {
+        location: { id: location.id, name: location.name },
+        code: result.code,
+        expires_at: result.expires_at.iso8601,
+        expires_in: (result.expires_at - now).ceil,
+        interval: CheckinCode::INTERVAL
+      }
+    end
+
     private
 
     def location_params

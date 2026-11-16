@@ -214,6 +214,18 @@ RSpec.configure do |config|
               total: { type: :integer }
             },
             required: %w[month locations plan_amount total]
+          },
+          CheckinCode: {
+            type: :object,
+            description: "受付のQRコードに入れるチェックイン用のコード。今と1つ前の時間枠のコードが有効",
+            properties: {
+              location: id_name,
+              code: { type: :string, example: "3f2a9c0d1b7e4a56" },
+              expires_at: datetime.merge(description: "このコードが「今の時間枠」でなくなる時刻（この後も1枠分は使える）"),
+              expires_in: { type: :integer, description: "expires_at までの残り秒数（サーバーの時刻で計算）" },
+              interval: { type: :integer, description: "時間枠の長さ（秒）", example: 60 }
+            },
+            required: %w[location code expires_at expires_in interval]
           }
         }
       },

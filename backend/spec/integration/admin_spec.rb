@@ -187,6 +187,24 @@ RSpec.describe "管理", type: :request do
     end
   end
 
+  path "/api/admin/locations/{id}/checkin_code" do
+    parameter name: :id, in: :path, schema: { type: :integer }
+    let(:id) { location.id }
+
+    get "受付用QRのコード（60秒ごとに変わる）" do
+      tags "管理"
+      produces "application/json"
+
+      response "200", "今の時間枠のコード" do
+        schema "$ref" => "#/components/schemas/CheckinCode"
+        run_test!
+      end
+
+      it_requires_admin
+      it_requires_login
+    end
+  end
+
   path "/api/admin/spaces" do
     get "スペース一覧（非公開を含む）" do
       tags "管理"

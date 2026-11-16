@@ -35,6 +35,36 @@ RSpec.describe "管理者API", type: :request do
     expect(json["errors"].keys).to include "location"
   end
 
+  describe "受付用QRのコード" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    let(:location) { create(:location) }
+
+    it "今の時間枠のコードと、残り秒数を返す" do
+      travel_to(Time.zone.local(2026, 11, 16, 10, 0, 45)) do
+        get "/api/admin/locations/#{location.id}/checkin_code", headers: auth_headers(admin)
+        expect(response).to have_http_status(:ok)
+        expect(json).to include("code" => CheckinCode.generate(location).code, "expires_in" => 15, "interval" => 60,
+                                "location" => { "id" => location.id, "name" => location.name })
+        expect(Time.zone.parse(json["expires_at"])).to eq Time.zone.local(2026, 11, 16, 10, 1, 0)
+      end
+    end
+
+    it "時間枠の始まりちょうどなら残り60秒" do
+      travel_to(Time.zone.local(2026, 11, 16, 10, 1, 0)) do
+        get "/api/admin/locations/#{location.id}/checkin_code", headers: auth_headers(admin)
+        expect(json["expires_in"]).to eq 60
+      end
+    end
+
+    it "一般会員は403、未ログインは401" do
+      get "/api/admin/locations/#{location.id}/checkin_code", headers: auth_headers(member)
+      expect(response).to have_http_status(:forbidden)
+      get "/api/admin/locations/#{location.id}/checkin_code"
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
+
   describe "拠点" do
     let(:params) do
       { name: "梅田", prefecture: "大阪府", address: "大阪市北区1-1", open_hour: 8, close_hour: 22,

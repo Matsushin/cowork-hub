@@ -326,6 +326,64 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/admin/locations/{id}/checkin_code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        /** 受付用QRのコード（60秒ごとに変わる） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 今の時間枠のコード */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CheckinCode"];
+                    };
+                };
+                /** @description 未ログイン */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description 管理者以外 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/spaces": {
         parameters: {
             query?: never;
@@ -1029,7 +1087,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** チェックイン */
+        /** チェックイン（受付のQRコードが必要） */
         post: {
             parameters: {
                 query?: never;
@@ -1042,6 +1100,8 @@ export interface paths {
                     "application/json": {
                         visit: {
                             location_id: number;
+                            /** @description 受付のQRコードに入っているコード（今と1つ前の時間枠のものが有効） */
+                            code: string;
                         };
                     };
                 };
@@ -1058,6 +1118,15 @@ export interface paths {
                 };
                 /** @description すでに別の拠点を利用中 */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description QRコードがない・期限切れ・別の拠点のもの、営業時間外など */
+                422: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1507,6 +1576,27 @@ export interface components {
             }[];
             plan_amount: number;
             total: number;
+        };
+        /** @description 受付のQRコードに入れるチェックイン用のコード。今と1つ前の時間枠のコードが有効 */
+        CheckinCode: {
+            location: {
+                id: number;
+                name: string;
+            };
+            /** @example 3f2a9c0d1b7e4a56 */
+            code: string;
+            /**
+             * Format: date-time
+             * @description このコードが「今の時間枠」でなくなる時刻（この後も1枠分は使える）
+             */
+            expires_at: string;
+            /** @description expires_at までの残り秒数（サーバーの時刻で計算） */
+            expires_in: number;
+            /**
+             * @description 時間枠の長さ（秒）
+             * @example 60
+             */
+            interval: number;
         };
     };
     responses: never;

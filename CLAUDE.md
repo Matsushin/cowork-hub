@@ -51,6 +51,9 @@
 - ドロップインは `Visit.check_in!`（会員行をロックして1拠点だけに制限）と `Visit#check_out!`（行をロックして料金を確定）で行う
 - チェックアウトし忘れは、チェックインした日の閉店時刻（`Visit#auto_checkout_at`）で締める（`auto_checked_out: true`）。
   `Visit.auto_check_out_overdue!` を定期実行（`infra/scheduler.tf`）と、利用中かどうか・利用中の人数・料金を返すAPIの前で呼ぶ
+- チェックインは受付のQRコードが必須（`POST /api/visits` の `code`）。コードは `CheckinCode`（HMAC：`secret_key_base` から作った鍵＋拠点ID＋60秒の時間枠。DBに保存しない）で、
+  今と1つ前の時間枠を有効にする。無効なら422（`errors.code`）。コードの取得は管理APIの `GET /api/admin/locations/:id/checkin_code` だけ。
+  受付用QRは `/admin/locations/[id]/qr` でサーバー側でSVGにし（`qrcode`）、残り0秒で `router.refresh()` する
 - 営業時間・ドロップイン料金は拠点ごと（`Location#open_at?` / `Location#drop_in_fee`）。定数で持たない
 - 月次の集計（請求 `MonthlyBill`・管理の売上）は `?month=YYYY-MM`（`MonthParam`）で受け取る
 - 画面の文言・エラーメッセージは日本語。UIはshadcn/uiのコンポーネントを使う

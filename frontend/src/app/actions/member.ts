@@ -3,17 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/api-error";
-import { profileSchema, reservationSchema } from "@/lib/schemas";
+import { checkinSchema, profileSchema, reservationSchema } from "@/lib/schemas";
 import { parseInput, success, tryApi } from "@/lib/server/action";
 import { apiFetch } from "@/lib/server/api";
 
-export async function checkIn(locationId: number): Promise<ActionState> {
-  const result = await tryApi(() =>
-    apiFetch("/visits", {
-      method: "POST",
-      body: { visit: { location_id: locationId } },
-    }),
-  );
+/** 受付のQRコード（/checkin の確認画面）からチェックインする */
+export async function checkIn(locationId: number, code: string): Promise<ActionState> {
+  const input = parseInput(checkinSchema, { location_id: locationId, code });
+  if (!input.ok) return input.state;
+  const result = await tryApi(() => apiFetch("/visits", { method: "POST", body: { visit: input.data } }));
   if (!result.ok) return result.state;
   revalidatePath("/", "layout"); // ヘッダーの「利用中」表示も更新する
   redirect("/visits");

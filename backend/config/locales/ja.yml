@@ -27,6 +27,7 @@ ja:
       visit:
         location: 拠点
         checked_in_at: チェックイン時刻
+        code: QRコード
   errors:
     format: "%{attribute}%{message}"
     messages:

@@ -406,6 +406,40 @@ components:
       - locations
       - plan_amount
       - total
+    CheckinCode:
+      type: object
+      description: 受付のQRコードに入れるチェックイン用のコード。今と1つ前の時間枠のコードが有効
+      properties:
+        location:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+          required:
+          - id
+          - name
+        code:
+          type: string
+          example: 3f2a9c0d1b7e4a56
+        expires_at:
+          type: string
+          format: date-time
+          description: このコードが「今の時間枠」でなくなる時刻（この後も1枠分は使える）
+        expires_in:
+          type: integer
+          description: expires_at までの残り秒数（サーバーの時刻で計算）
+        interval:
+          type: integer
+          description: 時間枠の長さ（秒）
+          example: 60
+      required:
+      - location
+      - code
+      - expires_at
+      - expires_in
+      - interval
 security:
 - bearer: []
 paths:
@@ -628,6 +662,36 @@ paths:
                       type: boolean
               required:
               - location
+  "/api/admin/locations/{id}/checkin_code":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: 受付用QRのコード（60秒ごとに変わる）
+      tags:
+      - 管理
+      responses:
+        '200':
+          description: 今の時間枠のコード
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CheckinCode"
+        '403':
+          description: 管理者以外
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
   "/api/admin/spaces":
     get:
       summary: スペース一覧（非公開を含む）
@@ -1059,7 +1123,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Error"
     post:
-      summary: チェックイン
+      summary: チェックイン（受付のQRコードが必要）
       tags:
       - ドロップイン
       parameters: []
@@ -1076,6 +1140,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Error"
+        '422':
+          description: QRコードがない・期限切れ・別の拠点のもの、営業時間外など
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
       requestBody:
         content:
           application/json:
@@ -1087,8 +1157,12 @@ paths:
                   properties:
                     location_id:
                       type: integer
+                    code:
+                      type: string
+                      description: 受付のQRコードに入っているコード（今と1つ前の時間枠のものが有効）
                   required:
                   - location_id
+                  - code
               required:
               - visit
   "/api/visits/current":

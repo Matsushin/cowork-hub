@@ -80,6 +80,12 @@ export const adminUserSchema = z.object({
 });
 
 /** 予約の作成（画面の枠選択から組み立てる値。Server Actionは誰でも呼べるので、サーバー側でも型を確かめる） */
+/** QRチェックイン（受付のQRコードの中身。コードが有効かはRailsが判定する） */
+export const checkinSchema = z.object({
+  location_id: z.number().int().positive(),
+  code: z.string().min(1, "受付のQRコードを読んでチェックインしてください"),
+});
+
 export const reservationSchema = z.object({
   space_id: z.number().int().positive(),
   starts_at: z.iso.datetime(),

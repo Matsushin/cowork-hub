@@ -22,8 +22,14 @@ class Visit < ApplicationRecord
     end
   end
 
+  # 受付のQRコード（CheckinCode）を読んだときだけチェックインできる（その場にいることを確かめる）
   # 同じ会員が同時に2か所へチェックインしないよう、会員行をロックしてから確認する
-  def self.check_in!(user:, location:, at: Time.current)
+  def self.check_in!(user:, location:, code:, at: Time.current)
+    unless CheckinCode.valid?(location, code, at:)
+      visit = new(user:, location:)
+      visit.errors.add(:code, "の有効期限が切れています。受付のQRコードを読み直してください")
+      raise ActiveRecord::RecordInvalid, visit
+    end
     transaction do
       user.lock!
       # 前回のチェックアウトし忘れは閉店時刻で締めてから確認する（締めないと別の拠点に入れない）

@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { setLocationActive } from "@/app/actions/admin";
+import { buttonVariants } from "@/components/ui/button";
 import { LocationCreateForm } from "@/components/admin/LocationCreateForm";
 import { ActionButton } from "@/components/form";
 import { Card } from "@/components/ui/card";
@@ -45,7 +47,10 @@ export default async function AdminLocationsPage() {
                 <TableCell className="px-4">
                   {l.active ? "公開中" : <span className="text-muted-foreground">停止中</span>}
                 </TableCell>
-                <TableCell className="px-4 text-right">
+                <TableCell className="space-x-2 px-4 text-right whitespace-nowrap">
+                  <Link href={`/admin/locations/${l.id}/qr`} className={buttonVariants({ variant: "outline" })}>
+                    受付用QR
+                  </Link>
                   <ActionButton variant="outline" action={setLocationActive.bind(null, l.id, !l.active)}>
                     {l.active ? "停止" : "公開"}
                   </ActionButton>
