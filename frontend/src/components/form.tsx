@@ -1,7 +1,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { cloneElement, createContext, isValidElement, startTransition, useActionState, useContext, useEffect, useId, useState } from "react";
+import {
+  cloneElement,
+  createContext,
+  isValidElement,
+  startTransition,
+  useActionState,
+  useContext,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { useForm, type DefaultValues, type FieldValues, type Resolver, type UseFormReturn } from "react-hook-form";
 import type { z } from "zod";
 import { toast } from "sonner";
@@ -37,7 +47,10 @@ type Options<S extends z.ZodType> = {
  * - Rails側のエラー（重複など）は Server Action から fieldErrors として返り、同じ <Field> に表示される
  * - onSubmit: <form onSubmit> に渡す / errors: <FormErrors> に渡す / form: React Hook Form 本体
  */
-export function useActionForm<S extends z.ZodType>(action: FormAction, { schema, defaultValues, resetOnSuccess = false }: Options<S>) {
+export function useActionForm<S extends z.ZodType>(
+  action: FormAction,
+  { schema, defaultValues, resetOnSuccess = false }: Options<S>,
+) {
   const [state, dispatch, pending] = useActionState(action, initialActionState);
   const form = useForm<FieldValues>({
     resolver: zodResolver(schema as never) as Resolver<FieldValues>,
@@ -106,7 +119,10 @@ export function Field({ label, errorKey, children }: { label: string; errorKey?:
   }
 
   const clientError = name ? ctx?.form.formState.errors[name]?.message : undefined;
-  const serverError = [...(name ? (ctx?.serverErrors[name] ?? []) : []), ...(errorKey ? (ctx?.serverErrors[errorKey] ?? []) : [])];
+  const serverError = [
+    ...(name ? (ctx?.serverErrors[name] ?? []) : []),
+    ...(errorKey ? (ctx?.serverErrors[errorKey] ?? []) : []),
+  ];
   const errors = typeof clientError === "string" ? [clientError] : serverError.length ? serverError : undefined;
   const errorId = `${id}-error`;
   const inputId = child?.props.id ?? id;

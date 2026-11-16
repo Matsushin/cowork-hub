@@ -8,7 +8,10 @@ export function MonthNav({ month, basePath, max }: { month: string; basePath: st
   const next = shiftMonth(month, 1);
   return (
     <div className="flex items-center gap-2">
-      <Link href={serializeMonth(basePath, { month: shiftMonth(month, -1) })} className={buttonVariants({ variant: "outline", size: "sm" })}>
+      <Link
+        href={serializeMonth(basePath, { month: shiftMonth(month, -1) })}
+        className={buttonVariants({ variant: "outline", size: "sm" })}
+      >
         ← 前月
       </Link>
       <span className="min-w-24 text-center font-semibold">{formatMonth(month)}</span>

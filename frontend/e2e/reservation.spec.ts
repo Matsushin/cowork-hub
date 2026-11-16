@@ -28,7 +28,11 @@ test("拠点を選んで会議室・席を予約し、予約一覧からキャ�
   // 予約一覧に移り、作った予約が表示される
   await expect(page).toHaveURL(/\/reservations/);
   const time = slotLabel!.replace("フリー席B ", "");
-  const row = page.locator("div", { hasText: `フリー席B` }).filter({ hasText: time }).filter({ has: page.getByRole("button", { name: "キャンセル" }) }).last();
+  const row = page
+    .locator("div", { hasText: `フリー席B` })
+    .filter({ hasText: time })
+    .filter({ has: page.getByRole("button", { name: "キャンセル" }) })
+    .last();
   await expect(row).toBeVisible();
 
   // キャンセル（確認ダイアログで「キャンセルする」）→ 通知が出て一覧から消える
