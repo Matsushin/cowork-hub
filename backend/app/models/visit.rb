@@ -24,6 +24,7 @@ class Visit < ApplicationRecord
 
   # 受付のQRコード（CheckinCode）を読んだときだけチェックインできる（その場にいることを確かめる）
   # 同じ会員が同時に2か所へチェックインしないよう、会員行をロックしてから確認する
+  # コードの判定は時刻だけに依存する（DBを見ない）のでロックの外で先に行う。無効なコードなら、利用中（409）より先に422を返す
   def self.check_in!(user:, location:, code:, at: Time.current)
     unless CheckinCode.valid?(location, code, at:)
       visit = new(user:, location:)
