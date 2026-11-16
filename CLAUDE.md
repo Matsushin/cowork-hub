@@ -14,7 +14,7 @@
   - Railsのコマンドはコンテナで実行する：`docker compose exec backend bin/rails ...`
   - 開発環境のメールは Mailpit（http://localhost:8025）に届く
 - バックエンドのテスト: `docker compose exec backend bundle exec rspec && docker compose exec backend bin/rubocop`
-- フロントの検査: `cd frontend && npm run lint && npx tsc --noEmit && npm test`（単体テストはVitest。`src/**/*.test.ts(x)`）
+- フロントの検査: `cd frontend && npm run lint && npm run format:check && npx tsc --noEmit && npm test`（単体テストはVitest。`src/**/*.test.ts(x)`）
 - E2E: `cd frontend && npm run test:e2e`（Playwright。`e2e/`。`docker compose up -d` でRailsを起動しておく。Next.jsは起動していなければ自動で起動する。seedのデータが必要）
 - Terraform: `terraform -chdir=infra fmt -recursive && terraform -chdir=infra validate`
 
@@ -72,6 +72,14 @@
 指摘しないこと
 - RuboCop・ESLint・`terraform fmt` で自動検出できる書式の問題（CIで検出済み）
 - 根拠のない好みの押し付け
+
+## Claude Code の設定（`.claude/`）
+- 機能を追加・変更するときは、スキル `add-feature`（`.claude/skills/add-feature/SKILL.md`）の手順に沿って進める
+- PostToolUse のフック（`.claude/hooks/format-edited-file.sh`）が、編集したファイルを自動で整形する
+  （Ruby は RuboCop、TS/JS などは Prettier → ESLint、Terraform は terraform fmt）。自動で直せない指摘は Claude に返される
+- Prettier の設定は `frontend/.prettierrc.json`（1行130文字）。生成物（`api-schema.ts`）と `components/ui/` は `.prettierignore` で除外。
+  全体を整形するときは `npm run format`（Prettier を既定の設定で直接実行しない）
+- 個人用の設定は `.claude/settings.local.json` に書く（コミットしない）
 
 ## GitHub Actionsでの運用メモ
 - レビュー用・`@claude` 用のワークフローは、mainに入ってから有効になる（PR内で変更しても、そのPRでは動かない）

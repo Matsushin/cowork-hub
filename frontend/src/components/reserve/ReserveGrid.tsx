@@ -129,7 +129,11 @@ export function ReserveGrid({ location, date, today, now, spaces, availability }
 
       <ErrorMessage message={error} />
 
-      <Card className={`overflow-x-auto p-0 transition-opacity ${loadingDate ? "pointer-events-none opacity-50" : ""}`} aria-busy={loadingDate} data-date={date}>
+      <Card
+        className={`overflow-x-auto p-0 transition-opacity ${loadingDate ? "pointer-events-none opacity-50" : ""}`}
+        aria-busy={loadingDate}
+        data-date={date}
+      >
         <Table className="w-full border-collapse text-xs">
           <TableHeader>
             <TableRow>

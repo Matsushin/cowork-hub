@@ -10,7 +10,9 @@
     "gen:api": "openapi-typescript ../backend/swagger/v1/openapi.yaml -o src/lib/api-schema.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -42,6 +44,7 @@
     "eslint-config-next": "16.4.6",
     "jsdom": "^31.0.1",
     "openapi-typescript": "^7.13.0",
+    "prettier": "3.10.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.1.0"

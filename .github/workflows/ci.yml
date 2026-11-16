@@ -58,6 +58,7 @@ jobs:
           npm run gen:api
           git diff --exit-code src/lib/api-schema.ts || (echo "::error::npm run gen:api を実行してコミットしてください" && exit 1)
       - run: npm run lint
+      - run: npm run format:check
       - run: npx tsc --noEmit
       - run: npm test
       - run: npm run build

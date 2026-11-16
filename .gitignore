@@ -16,3 +16,6 @@ infra/*.tfstate.*
 infra/*.tfvars
 infra/crash.log
 infra/tfplan
+
+# Claude Code の個人設定
+.claude/settings.local.json
