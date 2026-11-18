@@ -26,7 +26,9 @@ Rails.application.routes.draw do
       resources :users, only: %i[index show update]
       resources :reservations, only: :index
       resources :spaces, only: %i[index create update destroy]
-      resources :locations, only: %i[index create update]
+      resources :locations, only: %i[index create update] do
+        get :checkin_code, on: :member # 受付に表示するQRコードの中身（60秒ごとに変わる）
+      end
       resources :sales, only: :index
     end
   end

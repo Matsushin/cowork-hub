@@ -10,8 +10,71 @@ RSpec.describe "ドロップイン（入退室）", type: :request do
 
   around { |example| travel_to(now) { example.run } }
 
-  def check_in(as: user, target: location)
-    post "/api/visits", headers: auth_headers(as), params: { visit: { location_id: target.id } }
+  # code を省略したら、その拠点の今のQRコードでチェックインする
+  def check_in(as: user, target: location, code: CheckinCode.generate(target).code)
+    post "/api/visits", headers: auth_headers(as), params: { visit: { location_id: target.id, code: }.compact }
+  end
+
+  describe "受付のQRコード" do
+    # 2026-11-16 10:00:00 は60秒の時間枠の始まり（エポック秒が60で割り切れる）
+    it "今の時間枠のコードでチェックインできる（枠の終わり＝59秒まで）" do
+      code = CheckinCode.generate(location).code
+      travel 59.seconds
+      check_in(code:)
+      expect(response).to have_http_status(:created)
+    end
+
+    it "1つ前の時間枠のコードでもチェックインできる（ちょうど60秒の切り替わり直後）" do
+      travel_to(now + 59.seconds)
+      code = CheckinCode.generate(location).code
+      travel_to(now + 60.seconds)
+      expect(CheckinCode.generate(location).code).not_to eq code
+      check_in(code:)
+      expect(response).to have_http_status(:created)
+    end
+
+    it "1つ前の時間枠の最後（119秒後）まで有効" do
+      code = CheckinCode.generate(location).code
+      travel 119.seconds
+      check_in(code:)
+      expect(response).to have_http_status(:created)
+    end
+
+    it "2つ前の時間枠のコード（ちょうど120秒後）は422で、チェックインされない" do
+      code = CheckinCode.generate(location).code
+      travel 120.seconds
+      check_in(code:)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json["error"]).to eq "QRコードの有効期限が切れています。受付のQRコードを読み直してください"
+      expect(json["errors"].keys).to eq [ "code" ]
+      expect(user.visits).to be_empty
+    end
+
+    it "別の拠点のコードは422" do
+      check_in(code: CheckinCode.generate(create(:location)).code)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(user.visits).to be_empty
+    end
+
+    it "コードなし・でたらめなコードは422" do
+      check_in(code: nil)
+      expect(response).to have_http_status(:unprocessable_content)
+      check_in(code: "0123456789abcdef")
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(user.visits).to be_empty
+    end
+
+    it "有効なコードでも、営業時間外はこれまでどおり422" do
+      travel_to(now.change(hour: 21))
+      check_in
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json["error"]).to include "営業時間"
+    end
+
+    it "未ログインは401" do
+      post "/api/visits", params: { visit: { location_id: location.id, code: CheckinCode.generate(location).code } }
+      expect(response).to have_http_status(:unauthorized)
+    end
   end
 
   def check_out(id, as: user)

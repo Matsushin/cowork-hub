@@ -1,4 +1,4 @@
-import { createLoader, createParser, createSerializer, parseAsString, parseAsStringLiteral } from "nuqs/server";
+import { createLoader, createParser, createSerializer, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 import { isValidDate, isValidMonth } from "@/lib/format";
 
 /*
@@ -27,11 +27,16 @@ export const keywordParams = { q: parseAsString.withDefault("") };
 export const locationSearchParams = { q: parseAsString.withDefault(""), prefecture: parseAsString.withDefault("") };
 export const reservationFilterParams = { filter: parseAsStringLiteral(["upcoming", "all"]).withDefault("upcoming") };
 
+/** QRチェックイン（/checkin?location=1&code=...）。受付用QRのURLもここから組み立てる */
+export const checkinParams = { location: parseAsInteger, code: parseAsString.withDefault("") };
+
 export const loadDateParams = createLoader(dateParams);
 export const loadMonthParams = createLoader(monthParams);
 export const loadKeywordParams = createLoader(keywordParams);
 export const loadLocationSearchParams = createLoader(locationSearchParams);
 export const loadReservationFilterParams = createLoader(reservationFilterParams);
+export const loadCheckinParams = createLoader(checkinParams);
 
 export const serializeMonth = createSerializer(monthParams);
 export const serializeReservationFilter = createSerializer(reservationFilterParams);
+export const serializeCheckin = createSerializer(checkinParams);

@@ -17,3 +17,4 @@ export type Availability = Schemas["Availability"];
 export type Visit = Schemas["Visit"];
 export type Bill = Schemas["Bill"];
 export type Sales = Schemas["Sales"];
+export type CheckinCode = Schemas["CheckinCode"];

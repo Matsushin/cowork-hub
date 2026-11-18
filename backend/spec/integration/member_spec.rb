@@ -28,16 +28,25 @@ RSpec.describe "ドロップイン・予約・請求", type: :request do
       it_requires_login
     end
 
-    post "チェックイン" do
+    post "チェックイン（受付のQRコードが必要）" do
       tags "ドロップイン"
       produces "application/json"
       consumes "application/json"
       parameter name: :body, in: :body, schema: {
         type: :object,
-        properties: { visit: { type: :object, properties: { location_id: { type: :integer } }, required: %w[location_id] } },
+        properties: {
+          visit: {
+            type: :object,
+            properties: {
+              location_id: { type: :integer },
+              code: { type: :string, description: "受付のQRコードに入っているコード（今と1つ前の時間枠のものが有効）" }
+            },
+            required: %w[location_id code]
+          }
+        },
         required: %w[visit]
       }
-      let(:body) { { visit: { location_id: location.id } } }
+      let(:body) { { visit: { location_id: location.id, code: CheckinCode.generate(location).code } } }
 
       response "201", "チェックインした" do
         schema "$ref" => "#/components/schemas/Visit"
@@ -47,6 +56,12 @@ RSpec.describe "ドロップイン・予約・請求", type: :request do
       response "409", "すでに別の拠点を利用中" do
         schema "$ref" => "#/components/schemas/Error"
         before { create(:visit, user:, location: create(:location), checked_in_at: 1.hour.ago) }
+        run_test!
+      end
+
+      response "422", "QRコードがない・期限切れ・別の拠点のもの、営業時間外など" do
+        schema "$ref" => "#/components/schemas/Error"
+        let(:body) { { visit: { location_id: location.id, code: CheckinCode.generate(create(:location)).code } } }
         run_test!
       end
     end

@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { checkIn } from "@/app/actions/member";
-import { ActionButton } from "@/components/form";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-error";
@@ -49,11 +47,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
             <dt className="text-muted-foreground">利用中</dt>
             <dd>{location.current_visitors}人</dd>
           </dl>
-          {!user ? (
-            <Link href={`/login?next=/locations/${location.id}`} className={buttonVariants({ className: "self-start" })}>
-              ログインしてチェックイン
-            </Link>
-          ) : currentVisit ? (
+          {currentVisit ? (
             <p className="text-sm text-muted-foreground">
               {currentVisit.location.name}を利用中です。
               <Link href="/visits" className="text-primary hover:underline">
@@ -62,9 +56,8 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
               からチェックアウトできます。
             </p>
           ) : (
-            <ActionButton action={checkIn.bind(null, location.id)} className="self-start">
-              チェックインする
-            </ActionButton>
+            // その場にいることを確かめるため、チェックインは受付のQRコードからだけ行う
+            <p className="rounded-md bg-muted px-3 py-2 text-sm">受付のQRコードを読んでチェックインしてください</p>
           )}
         </Card>
 

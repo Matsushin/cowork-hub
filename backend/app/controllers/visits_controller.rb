@@ -15,8 +15,9 @@ class VisitsController < ApplicationController
   end
 
   def create
-    location = Location.active.find(params.expect(visit: [ :location_id ])[:location_id])
-    visit = Visit.check_in!(user: current_user, location:)
+    attrs = params.expect(visit: [ :location_id, :code ])
+    location = Location.active.find(attrs[:location_id])
+    visit = Visit.check_in!(user: current_user, location:, code: attrs[:code])
     render json: VisitSerializer.call(visit), status: :created
   rescue Visit::AlreadyCheckedIn => e
     render json: { error: e.message }, status: :conflict
