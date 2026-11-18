@@ -8,6 +8,11 @@ description: ee-office（cowork-hub）に機能を追加・変更するときの
 実装の約束ごと（認可・エラー形式・フォームの作り方など）は CLAUDE.md にある。この手順はそれを**どの順で、どこに書くか**をまとめたもの。
 各段階の終わりに「確認」を満たしてから次へ進む。書式（RuboCop・Prettier・ESLint・terraform fmt）は PostToolUse のフックが自動で整える。
 
+フックについて
+- 返ってくるのは自動で直せない**エラー**だけ。ESLint の警告（未使用の import など）は返らないので、手順9の `npm run lint` で拾う
+- 1つの変更を複数回の Edit に分けると、途中の状態でエラーが返る。import や定義を先に足してから、使う側を書く
+- リポジトリ直下のファイル（README.md・CLAUDE.md）や `config/locales/*.yml` は整形の対象外
+
 ## 0. 仕様を確かめる（コードを書く前）
 
 - 受け入れ条件を箇条書きにする。曖昧な点（料金・権限・営業時間外の扱いなど）はユーザーに確認してから進める
@@ -47,6 +52,10 @@ description: ee-office（cowork-hub）に機能を追加・変更するときの
 
 ## 5. API仕様書（OpenAPI）
 
+request spec と rswag で同じケースを二重に書かない。分担は次のとおり。
+- **request spec（`spec/requests/`）**：振る舞いの確認。異常系・認可・境界値は全部ここに書く
+- **rswag（`spec/integration/`）**：仕様書とレスポンスの形の確認。エンドポイントごとに、正常系と、仕様書に載せたい代表的なエラー（例：422・403）を1つずつ
+
 1. `spec/integration/` に rswag のテストを追加（レスポンスがスキーマどおりかも検証される）
 2. 新しい形のレスポンスは `spec/swagger_helper.rb` の `components.schemas` に追加・修正
 3. `cd backend && bin/rails rswag:specs:swaggerize` で `swagger/v1/openapi.yaml` を再生成
@@ -67,6 +76,11 @@ description: ee-office（cowork-hub）に機能を追加・変更するときの
 - 文言は日本語、UIは `components/ui/`（shadcn/ui）を使う
 - 判定や変換のロジックは関数に切り出し、Vitest の単体テスト（`*.test.ts`）を書く
 
+### 依存パッケージを足すとき
+- まず既存の依存や標準機能で足りないかを確かめる。足すなら、なぜ必要かをPRの説明に書く
+- npm：`cd frontend && npm install --save-exact <パッケージ>@<バージョン>`（バージョンを固定する）。`package.json` と `package-lock.json` を両方コミットする。開発用だけなら `-D`
+- gem：`Gemfile` に追記し `docker compose exec backend bundle install`。`Gemfile.lock` もコミットする
+
 ## 8. ドキュメント
 
 - 利用者に見える機能を足したら README.md の機能一覧を更新する
@@ -82,6 +96,15 @@ cd frontend && npm run test:e2e   # 画面の流れを変えたとき
 
 インフラを変えたときは `terraform -chdir=infra fmt -recursive && terraform -chdir=infra validate` も実行する。
 最後に、アプリを起動して実際の画面で動きを確認する。
+
+### E2E（Playwright）を書くときの注意
+- seed のデータを前提にする（拠点名・アカウント）。テストの中でseedに無いデータを当てにしない
+- **現在時刻に左右される処理**（営業時間内だけできる操作など）は、Rails の時刻を固定できないため、条件に合わない時間帯は
+  `test.skip(条件, "理由")` で理由つきでスキップする。境界値の確認は request spec（`travel_to`）に任せる
+- **状態を残さない**：チェックインしたらチェックアウトする、予約したらキャンセルするなど、テストの最後で元に戻す。
+  ほかのテストや次の実行が、残った状態で失敗しないようにする
+- ローカルの E2E は開発用DB（seed）をそのまま使うので、実行すると利用履歴や予約が記録として残る。
+  消したいときは `docker compose exec backend bin/rails db:seed:replant`（全テーブルを空にしてseedを入れ直す。手で作ったデータも消えるので、実行前にユーザーに確認する）
 
 ## 10. 自分でレビューしてからPR
 
