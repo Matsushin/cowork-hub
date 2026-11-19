@@ -45,6 +45,7 @@ data "aws_iam_policy_document" "execution_secrets" {
     resources = [
       aws_ssm_parameter.secret_key_base.arn,
       aws_ssm_parameter.admin_password.arn,
+      aws_ssm_parameter.demo_password.arn,
     ]
   }
 }
@@ -109,6 +110,7 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "DB_USERNAME", value = aws_db_instance.main.username },
       { name = "RAILS_LOG_LEVEL", value = "info" },
       { name = "SEED_ADMIN_EMAIL", value = "admin@example.com" },
+      { name = "SEED_DEMO_EMAIL", value = "demo@example.com" },
       # Solid Queue のワーカーをPumaの中で動かす（メール送信などの非同期処理）
       { name = "SOLID_QUEUE_IN_PUMA", value = "true" },
       # メール本文のリンク先
@@ -119,6 +121,7 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "DB_PASSWORD", valueFrom = "${local.db_secret_arn}:password::" },
       { name = "SECRET_KEY_BASE", valueFrom = aws_ssm_parameter.secret_key_base.arn },
       { name = "SEED_ADMIN_PASSWORD", valueFrom = aws_ssm_parameter.admin_password.arn },
+      { name = "SEED_DEMO_PASSWORD", valueFrom = aws_ssm_parameter.demo_password.arn },
     ]
     logConfiguration = {
       logDriver = "awslogs"

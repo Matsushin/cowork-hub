@@ -110,10 +110,15 @@ bin/seed-production                     # 初期データを投入
 terraform -chdir=infra output app_url
 ```
 
-本番の管理者パスワードの確認方法
+本番のアカウント（seedで作成。パスワードはTerraformが生成してSSMに保存）
+- 管理者：`admin@example.com`
+- デモ会員：`demo@example.com`（非公開。面談の相手などに個別に伝える。利用履歴と翌日の会議室予約のサンプル入り）
 
 ```bash
+# 管理者のパスワード
 aws ssm get-parameter --with-decryption --name /cowork-hub/backend/SEED_ADMIN_PASSWORD --query Parameter.Value --output text
+# デモ会員のパスワード
+aws ssm get-parameter --with-decryption --name /cowork-hub/backend/SEED_DEMO_PASSWORD --query Parameter.Value --output text
 ```
 
 費用の目安（東京リージョン・常時稼働）：ALB 約2,800円＋Fargate 2タスク 約2,500円＋RDS db.t4g.micro 約2,500円＋パブリックIPv4 約1,500円で、**月8,000〜9,000円程度**です。
