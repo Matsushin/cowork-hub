@@ -1,0 +1,240 @@
+name: PR Screenshots
+
+# 画面に関わるファイルが変わったPRで、変更前（分岐元）と変更後の画面を撮り、PRにコメントする
+# - 撮るページは、変わったファイルから決める（frontend/screenshots/targets.mjs）
+# - E2Eのテスト（frontend/e2e/*.spec.ts）が変わったら、そのテストの操作を録画してGIFにする
+# - 画像は専用ブランチ pr-screenshots に置き、コメントから参照する（GitHubには画像をアップロードするAPIがないため。公開リポジトリなので表示できる）
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "frontend/src/**"
+      - "frontend/e2e/**"
+      - "frontend/screenshots/**"
+      - "frontend/playwright.screenshots.config.ts"
+      - ".github/workflows/pr-screenshots.yml"
+
+concurrency:
+  group: pr-screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # 撮るページ・録画するテストと、比べる分岐元のコミットを決める
+  plan:
+    # ドラフトと、フォークからのPR（専用ブランチにpushできない）は対象外
+    if: >-
+      !github.event.pull_request.draft &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      base: ${{ steps.targets.outputs.base }}
+      pages: ${{ steps.targets.outputs.pages }}
+      specs: ${{ steps.targets.outputs.specs }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - id: targets
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+          git diff --name-only "$base" "$HEAD_SHA" > changed.txt
+          json=$(node frontend/screenshots/targets.mjs < changed.txt)
+          echo "$json"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "pages=$(echo "$json" | jq -r '.pages | join(",")')" >> "$GITHUB_OUTPUT"
+          echo "specs=$(echo "$json" | jq -r '.specs | join(" ")')" >> "$GITHUB_OUTPUT"
+
+  # 変更前（base）と変更後（head）を、それぞれのコードでアプリを起動して撮る
+  capture:
+    needs: plan
+    if: needs.plan.outputs.pages != '' || needs.plan.outputs.specs != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        side: [base, head]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ppassword"
+          --health-interval=5s --health-retries=20
+    env:
+      RAILS_ENV: test
+      DB_HOST: 127.0.0.1
+      CI: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.side == 'base' && needs.plan.outputs.base || github.event.pull_request.head.sha }}
+      # 撮影の仕組みは、変更前のコードにはまだ無いことがあるので、変更後のものを使う
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: _head
+          sparse-checkout: |
+            frontend/screenshots
+            frontend/playwright.screenshots.config.ts
+          sparse-checkout-cone-mode: false
+      - run: |
+          rm -rf frontend/screenshots
+          cp -r _head/frontend/screenshots frontend/
+          cp _head/frontend/playwright.screenshots.config.ts frontend/
+          rm -rf _head
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: backend
+          bundler-cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: DBの準備（seedのテストアカウント・拠点を入れる）
+        working-directory: backend
+        run: bin/rails db:create db:schema:load db:seed
+      - name: 依存関係とブラウザのインストール
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: ページを撮る
+        if: needs.plan.outputs.pages != ''
+        working-directory: frontend
+        env:
+          SCREENSHOT_PAGES: ${{ needs.plan.outputs.pages }}
+          SCREENSHOT_OUT: ${{ github.workspace }}/out/${{ matrix.side }}
+        run: npx playwright test -c playwright.screenshots.config.ts
+      # 録画は変更後だけ。テストの成否は問わない（失敗した画面も記録として残す）
+      - name: E2Eの操作を録画してGIFにする
+        if: matrix.side == 'head' && needs.plan.outputs.specs != ''
+        working-directory: frontend
+        env:
+          VIDEO_SPECS: ${{ needs.plan.outputs.specs }}
+        run: |
+          specs=$(echo "$VIDEO_SPECS" | sed 's#e2e/##g')
+          npx playwright test -c playwright.screenshots.config.ts $specs || true
+          command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          mkdir -p "$GITHUB_WORKSPACE/out/video"
+          # ファイル名は英数字にし（URLに使うため）、元のテスト名は .txt に残してコメントの見出しにする
+          n=0
+          find test-results-video -name '*.webm' | sort | while read -r f; do
+            n=$((n + 1))
+            title=$(basename "$(dirname "$f")")
+            name="$(printf '%02d' "$n")-$(echo "$title" | sed 's/[^A-Za-z0-9._-]//g' | cut -c1-40)"
+            ffmpeg -loglevel error -y -i "$f" \
+              -vf "fps=6,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" \
+              "$GITHUB_WORKSPACE/out/video/$name.gif"
+            echo "$title" > "$GITHUB_WORKSPACE/out/video/$name.txt"
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-${{ matrix.side }}
+          path: out/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # 画像を専用ブランチに置き、PRのコメントを作る（または更新する）。PRのコードは実行しない
+  publish:
+    needs: [plan, capture]
+    if: always() && needs.capture.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+      BASE: ${{ needs.plan.outputs.base }}
+      PAGES: ${{ needs.plan.outputs.pages }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: screenshots-*
+          merge-multiple: true
+          path: out
+      - name: 画像を pr-screenshots ブランチに置く
+        id: push
+        run: |
+          dir="pr-$PR/${SHA:0:7}"
+          git init -q assets && cd assets
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # 完全な名前で探す（「pr-screenshots」だけだと feature/pr-screenshots などにも一致するため）
+          if git ls-remote --exit-code origin refs/heads/pr-screenshots >/dev/null; then
+            git fetch -q --depth 1 origin refs/heads/pr-screenshots
+            git checkout -q -b pr-screenshots FETCH_HEAD
+          else
+            git checkout -q --orphan pr-screenshots
+          fi
+          mkdir -p "$dir"
+          if [ -d ../out ] && [ -n "$(ls -A ../out)" ]; then cp -r ../out/. "$dir/"; fi
+          git add -A
+          git commit -q -m "PR #$PR (${SHA:0:7}) の画面キャプチャ" || true
+          git push -q origin pr-screenshots
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+      - name: PRにコメントする
+        env:
+          DIR: ${{ steps.push.outputs.dir }}
+          CAPTURE_RESULT: ${{ needs.capture.result }}
+        run: |
+          raw="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/pr-screenshots/$DIR"
+          marker="<!-- pr-screenshots -->"
+          {
+            echo "$marker"
+            echo "## 🖼 画面のキャプチャ（自動）"
+            echo
+            echo "変更前＝分岐元 \`${BASE:0:7}\`、変更後＝このPR \`${SHA:0:7}\`。seed のデータで撮影しています。"
+            if [ "$CAPTURE_RESULT" != "success" ]; then
+              echo
+              echo "> ⚠️ 撮影の一部が失敗しました。[実行ログ](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) を確認してください。"
+            fi
+            if [ -n "$PAGES" ]; then
+              echo
+              echo "| ページ | 変更前 | 変更後 |"
+              echo "|---|---|---|"
+              for name in ${PAGES//,/ }; do
+                before="（なし）"; after="（なし）"
+                [ -f "out/base/$name.png" ] && before="<img src=\"$raw/base/$name.png\" width=\"400\">"
+                [ -f "out/head/$name.png" ] && after="<img src=\"$raw/head/$name.png\" width=\"400\">"
+                echo "| \`$name\` | $before | $after |"
+              done
+            fi
+            if [ -d out/video ] && [ -n "$(ls -A out/video)" ]; then
+              echo
+              echo "### 🎬 E2Eの操作（変更後）"
+              for f in out/video/*.gif; do
+                name=$(basename "$f" .gif)
+                title=$(cat "out/video/$name.txt" 2>/dev/null || echo "$name")
+                echo
+                echo "<details><summary>$title</summary>"
+                echo
+                echo "<img src=\"$raw/video/$name.gif\" width=\"720\">"
+                echo
+                echo "</details>"
+              done
+            fi
+          } > body.md
+          id=$(gh api "repos/${GITHUB_REPOSITORY}/issues/$PR/comments" --paginate \
+            -q ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/$id" -F body=@body.md >/dev/null
+          else
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file body.md
+          fi
