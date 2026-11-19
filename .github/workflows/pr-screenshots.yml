@@ -127,9 +127,10 @@ jobs:
           VIDEO_SPECS: ${{ needs.plan.outputs.specs }}
         run: |
           specs=$(echo "$VIDEO_SPECS" | sed 's#e2e/##g')
-          npx playwright test -c playwright.screenshots.config.ts $specs || true
-          command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           mkdir -p "$GITHUB_WORKSPACE/out/video"
+          # 失敗したことはコメントで知らせる（publish が _failed を見る）
+          npx playwright test -c playwright.screenshots.config.ts $specs || touch "$GITHUB_WORKSPACE/out/video/_failed"
+          command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           # ファイル名は英数字にし（URLに使うため）、元のテスト名は .txt に残してコメントの見出しにする
           n=0
           find test-results-video -name '*.webm' | sort | while read -r f; do
@@ -153,6 +154,10 @@ jobs:
     needs: [plan, capture]
     if: always() && needs.capture.result != 'skipped'
     runs-on: ubuntu-latest
+    # 共有ブランチ pr-screenshots への push がほかのPRとぶつからないよう、1つずつ順番に実行する（取り消さない）
+    concurrency:
+      group: pr-screenshots-publish
+      cancel-in-progress: false
     permissions:
       contents: write
       pull-requests: write
@@ -216,12 +221,21 @@ jobs:
                 echo "| \`$name\` | $before | $after |"
               done
             fi
-            if [ -d out/video ] && [ -n "$(ls -A out/video)" ]; then
+            if [ -d out/video ]; then
+              shopt -s nullglob
               echo
               echo "### 🎬 E2Eの操作（変更後）"
-              for f in out/video/*.gif; do
+              if [ -f out/video/_failed ]; then
+                echo
+                echo "> ⚠️ 録画したE2Eのテストが失敗しました（失敗した操作もそのまま録画しています）。[実行ログ](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+              fi
+              gifs=(out/video/*.gif)
+              [ ${#gifs[@]} -eq 0 ] && { echo; echo "録画はありません（テストがスキップされた可能性があります）。"; }
+              for f in "${gifs[@]}"; do
                 name=$(basename "$f" .gif)
+                # テスト名をそのままHTMLに入れないよう、エスケープする
                 title=$(cat "out/video/$name.txt" 2>/dev/null || echo "$name")
+                title=$(printf '%s' "$title" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g')
                 echo
                 echo "<details><summary>$title</summary>"
                 echo
