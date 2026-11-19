@@ -19,7 +19,9 @@ resource "aws_sns_topic" "alerts" {
   name = "${var.project}-alerts"
 }
 
-# CloudWatch アラームと AWS Budgets からの発行を許可する
+data "aws_caller_identity" "current" {}
+
+# CloudWatch アラームと AWS Budgets からの発行を許可する（このアカウントのものに限る）
 data "aws_iam_policy_document" "alerts_topic" {
   statement {
     actions   = ["sns:Publish"]
@@ -27,6 +29,11 @@ data "aws_iam_policy_document" "alerts_topic" {
     principals {
       type        = "Service"
       identifiers = ["cloudwatch.amazonaws.com", "budgets.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
     }
   }
 }
