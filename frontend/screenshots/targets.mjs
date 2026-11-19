@@ -12,7 +12,7 @@
 // - どのページからも使われていないファイル … 撮らない
 // - テスト（*.test.ts）・生成物（src/lib/api-schema.ts） … 対象外
 // - e2e/*.spec.ts … そのテストを録画する
-// - キャプチャの仕組み自体（このディレクトリ・設定・ワークフロー） … 全ページ（仕組みが動くかを確かめるため）
+// - キャプチャの仕組み自体（このディレクトリ・設定・ワークフロー） … 全ページと、E2Eの全部の録画（仕組みが動くかを確かめるため）
 // - 削除されたファイル … 使っていた画面が分からないので全ページ
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -86,11 +86,19 @@ function addPagesUsing(file) {
   }
 }
 
-if (changed.includes(".github/workflows/pr-screenshots.yml")) all();
+// キャプチャの仕組み自体が変わったときは、全ページを撮り、E2Eも全部録画して、仕組みが動くかを確かめる
+function allWithVideos() {
+  all();
+  for (const f of readdirSync(path.join(frontendDir, "e2e"))) {
+    if (f.endsWith(".spec.ts")) specs.add(`e2e/${f}`);
+  }
+}
+
+if (changed.includes(".github/workflows/pr-screenshots.yml")) allWithVideos();
 
 for (const file of files) {
   if (file.startsWith("screenshots/") || file === "playwright.screenshots.config.ts") {
-    all();
+    allWithVideos();
     continue;
   }
   if (/^e2e\/[^/]+\.spec\.ts$/.test(file)) {

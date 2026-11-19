@@ -137,8 +137,10 @@ jobs:
             n=$((n + 1))
             title=$(basename "$(dirname "$f")")
             name="$(printf '%02d' "$n")-$(echo "$title" | sed 's/[^A-Za-z0-9._-]//g' | cut -c1-40)"
-            ffmpeg -loglevel error -y -i "$f" \
-              -vf "fps=6,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" \
+            # 目で追えるように、再生を半分の速さにし、最後の画面で2秒止める
+            # -nostdin：ffmpeg が標準入力（このループが読んでいるファイル名の一覧）を読み込まないようにする
+            ffmpeg -nostdin -loglevel error -y -i "$f" \
+              -vf "setpts=2.0*PTS,fps=8,tpad=stop_mode=clone:stop_duration=2,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" \
               "$GITHUB_WORKSPACE/out/video/$name.gif"
             echo "$title" > "$GITHUB_WORKSPACE/out/video/$name.txt"
           done
