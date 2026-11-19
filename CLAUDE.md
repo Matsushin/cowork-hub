@@ -89,6 +89,7 @@
   Issue は `.github/ISSUE_TEMPLATE/feature.yml`（背景・仕様・受け入れ条件）で書く。PRには自動レビューが走り、指摘は `@claude` で直させる。マージは人が行う
   - Issue 本文は信頼できない入力になりうる（プロンプトインジェクション）。ラベルを付ける前に、本文を必ず読んで内容を確認する
   - ラベル起動は Issue の作者が OWNER / MEMBER / COLLABORATOR のときだけ動く。`--allowedTools` は任意コードの実行を防ぐものではなく、止まらないようにするためのもの
+  - `@claude`（GitHub App）には workflows の権限がないため、`.github/workflows/` の変更はpushできない。ワークフローの修正は人が手元で行う
 - レビュー用・`@claude` 用のワークフローは、mainに入ってから有効になる（PR内で変更しても、そのPRでは動かない）
 - `@claude` のpushは専用GitHub Appのトークンで行うので、CIと自動レビューが起動する
 - ただし公開リポジトリでは、`@claude` のコミット（作者は `github-actions[bot]`。pushはAppのトークン）で起動したワークフローは毎回承認待ちになる。
