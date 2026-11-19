@@ -162,6 +162,7 @@ terraform -chdir=infra apply
 | `claude.yml` | PR・Issueのコメントやレビュー、Issueの作成・アサインで `@claude` と書いたとき | 質問に答えたり、修正してコミットしたりする |
 | `claude.yml` | Issueにラベル `claude-implement` を付けたとき | Issueの仕様に沿って実装し、テストを通してからPRを作る |
 
+- ラベル `claude-implement` を付ける前に、Issue 本文を必ず読んで内容を確認してください（本文の指示にClaudeが従うため）。Issueの作者がオーナー・メンバー・コラボレーター以外のときは動きません
 - レビューの観点とプロジェクトの規約は `CLAUDE.md` に書いています
 - 指摘には重要度（【必須】【推奨】【参考】）を付けます
 - `@claude` に反応するのは、オーナー・メンバー・コラボレーターのコメントだけです
