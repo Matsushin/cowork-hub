@@ -65,7 +65,7 @@
 ## 画面のキャプチャ（PR）
 - 画面に関わるファイル（`frontend/src`・`frontend/e2e`）が変わったPRでは、`.github/workflows/pr-screenshots.yml` が
   変更前（分岐元）と変更後の画面を seed のデータで撮り、PRにコメントする（同じコメントを更新する）。E2Eのテストを変えたら、その操作をGIFで貼る
-- 撮るページは `frontend/screenshots/targets.mjs` が変わったファイルから決める。ページの一覧は `frontend/screenshots/pages.mjs`（ページを増やしたら追加する）
+- 撮るページは `frontend/screenshots/targets.mjs` が変わったファイルから決める（import をたどり、そのファイルを使うページ・レイアウトだけを撮る。型だけの import はたどらない）。ページの一覧は `frontend/screenshots/pages.mjs`（ページを増やしたら追加する）
 - 画像は専用ブランチ `pr-screenshots` に置いている（GitHubには画像をアップロードするAPIがないため）。このブランチはマージしない
 
 ## コードレビューの観点
