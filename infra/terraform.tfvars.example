@@ -3,3 +3,7 @@
 
 # 独自ドメインでHTTPS化する場合に指定する
 # domain_name = "coworking.example.com"
+
+# ドメインのDNSにNSレコードを追加できない場合（レンタルサーバーのDNSなど）は false にする。
+# Route 53を使わず、terraform output dns_records_to_add のCNAMEをDNSに手で追加する
+# use_route53 = false

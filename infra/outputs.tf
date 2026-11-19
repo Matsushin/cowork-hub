@@ -3,8 +3,26 @@ output "app_url" {
 }
 
 output "delegation_name_servers" {
-  description = "親ゾーンに登録するNSレコードの値（HTTPS有効時のみ）"
-  value       = local.https_enabled ? aws_route53_zone.app[0].name_servers : null
+  description = "親ゾーンに登録するNSレコードの値（Route 53を使う場合のみ）"
+  value       = local.use_route53 ? aws_route53_zone.app[0].name_servers : null
+}
+
+output "dns_records_to_add" {
+  description = "Route 53を使わない場合に、ドメインのDNSへ手で追加するCNAMEレコード（証明書の検証用とアプリ用）"
+  value = local.https_enabled && !local.use_route53 ? concat(
+    [for o in aws_acm_certificate.app[0].domain_validation_options : {
+      purpose = "ACM証明書の検証"
+      name    = o.resource_record_name
+      type    = o.resource_record_type
+      value   = o.resource_record_value
+    }],
+    [{
+      purpose = "アプリ（ALB）"
+      name    = "${var.domain_name}."
+      type    = "CNAME"
+      value   = "${aws_lb.main.dns_name}."
+    }],
+  ) : null
 }
 
 output "ecr_repository_urls" {
