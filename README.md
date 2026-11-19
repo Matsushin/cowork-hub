@@ -126,9 +126,27 @@ aws ssm get-parameter --with-decryption --name /cowork-hub/backend/SEED_DEMO_PAS
 使わないときは止められます。
 
 ```bash
-terraform -chdir=infra apply -var desired_count=0   # タスクだけ停止（ALB・RDSの料金は継続）
+terraform -chdir=infra apply -var desired_count=0   # タスクだけ停止（ALB・RDSの料金は継続。夜間停止・自動チェックアウトも止まる）
+terraform -chdir=infra apply                        # 再開（desired_count=1）
 terraform -chdir=infra destroy                      # すべて削除（データも消えます）
 ```
+
+### 夜間停止
+
+費用を抑えるため、毎日 **20:00〜翌3:00（日本時間）はタスク（backend / frontend）を0にしています**（`infra/night_stop.tf`）。
+EventBridge Scheduler が 20:00 に desiredCount を0にし、3:00 に `desired_count` へ戻します。停止中にアクセスすると、ALB が 503 を返します。
+
+| 変数 | 既定 | 内容 |
+|---|---|---|
+| `night_stop_enabled` | `true` | 夜間停止をするか（`desired_count=0` のときは無効） |
+| `night_stop_start` | `"20:00"` | 止める時刻（HH:MM） |
+| `night_stop_end` | `"03:00"` | 起動する時刻（HH:MM）。起動してから使えるまで2〜3分かかる |
+
+- 削減できるのは Fargate とタスクのパブリックIPv4の7時間分で、**月1,000円程度**（月8,000〜9,000円 → 7,000〜8,000円）。ALB（約2,800円）と ALB のパブリックIPv4 は止められないので残ります
+- RDS は止めていません。同じ時間に止めても月600〜800円程度しか減らず、起動に5〜10分かかる・止めている間は自動バックアップを取らない・自動チェックアウトがDBに繋がらない、といった注意点が増えるためです
+- 自動チェックアウト（毎時5分）は単発のタスクで動くので、夜間停止中も動きます（seedの拠点は21〜23時まで営業のため、閉店時刻の締めに必要）
+- スケジュールが desiredCount を書き換えるので、Terraform は `desired_count` の差分を無視します（`ignore_changes`）。`desired_count` を変えたときだけ、apply が AWS CLI でサービスに反映します。夜間に apply すると、その値でタスクが起動し、次の 20:00 まで動きます
+- 夜間停止中に `bin/deploy` すると、新しいイメージで動くのは翌朝の起動からです
 
 ### 独自ドメインでHTTPS化する
 

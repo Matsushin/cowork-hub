@@ -205,5 +205,11 @@ resource "aws_ecs_service" "app" {
     rollback = true
   }
 
+  # 夜間停止（night_stop.tf）のスケジュールが desiredCount を書き換えるので、apply で戻さない。
+  # desired_count は作成時だけ使い、変えたときは terraform_data.desired_count が反映する
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+
   depends_on = [aws_lb_listener_rule.api]
 }

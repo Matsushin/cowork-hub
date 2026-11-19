@@ -1,7 +1,7 @@
 # --- 定期実行：ドロップインの自動チェックアウト ---
 # 閉店時刻を過ぎても利用中のままの利用を、毎時5分に締める（bin/rails visits:auto_check_out）
 # アプリ側でもチェックイン時・利用状況の取得時に締めるので、これは集計や「利用中の人数」を整えるための補助
-# タスクを止めている間（desired_count=0）はスケジュールも止める
+# タスクを止めている間（desired_count=0）はスケジュールも止める。夜間停止（night_stop.tf）の間は、単発のタスクで動かすので止めない
 
 data "aws_iam_policy_document" "scheduler_assume" {
   statement {
