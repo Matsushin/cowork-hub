@@ -57,3 +57,6 @@ group :development do
   # 送ったメールをブラウザで開いて確認する
   gem "letter_opener"
 end
+
+gem "sentry-ruby", "~> 7.3"
+gem "sentry-rails", "~> 7.3"

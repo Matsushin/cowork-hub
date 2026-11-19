@@ -130,6 +130,26 @@ terraform -chdir=infra apply -var desired_count=0   # タスクだけ停止（AL
 terraform -chdir=infra destroy                      # すべて削除（データも消えます）
 ```
 
+### Sentry でエラーを調べる
+
+Rails と Next.js（サーバー側）の例外を Sentry に送り、スタックトレースや発生した画面・API から原因を調べます。Slack への通知は CloudWatch のアラームで行います（Sentry の無料プランは通知がメールのみのため）。
+
+- DSN を指定したときだけ送ります。未指定なら SDK は何もしません（開発環境・テストでは送らない）
+- 個人情報や秘密情報は送りません：Cookie・リクエストヘッダー・リクエストの本文（ログイン時のパスワードなど）・ユーザー情報は止めています（Rails は Cookie とヘッダーの値を `[Filtered]` にする）
+- 性能の記録（トレース）は10%のリクエストだけ（`sentry_traces_sample_rate`）
+- ブラウザ側のエラーは送りません（DSN をビルド時に埋め込む必要があるため）
+
+1. [Sentry](https://sentry.io/) で Rails 用と Next.js 用のプロジェクトを作り、それぞれの DSN を `infra/terraform.tfvars` に書く
+
+```hcl
+sentry_dsn_backend  = "https://xxxx@o0.ingest.sentry.io/0"
+sentry_dsn_frontend = "https://yyyy@o0.ingest.sentry.io/0"
+```
+
+2. `terraform -chdir=infra apply` で反映する（タスクが新しい環境変数で入れ替わる）
+
+送信がうまくいかないときは、タスクに `SENTRY_DEBUG=1` を渡すと Next.js 側の送信の様子がログに出ます。
+
 ### 独自ドメインでHTTPS化する
 
 `domain_name` を指定すると、ACM証明書とHTTPSリスナーを作ります。HTTPはHTTPSへリダイレクトし、Next.jsのサーバーからRailsへの通信もHTTPS（`API_ORIGIN=https://<ドメイン>`）になります。Cookieには `Secure` 属性が付きます。
