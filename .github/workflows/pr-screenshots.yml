@@ -176,8 +176,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if git ls-remote --exit-code --heads origin pr-screenshots >/dev/null; then
-            git fetch -q --depth 1 origin pr-screenshots && git checkout -q -b pr-screenshots FETCH_HEAD
+          # 完全な名前で探す（「pr-screenshots」だけだと feature/pr-screenshots などにも一致するため）
+          if git ls-remote --exit-code origin refs/heads/pr-screenshots >/dev/null; then
+            git fetch -q --depth 1 origin refs/heads/pr-screenshots
+            git checkout -q -b pr-screenshots FETCH_HEAD
           else
             git checkout -q --orphan pr-screenshots
           fi
