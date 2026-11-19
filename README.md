@@ -182,6 +182,8 @@ terraform -chdir=infra output dns_records_to_add
 terraform -chdir=infra apply -var desired_count=0
 ```
 
+4. 基盤ができたら、上の「AWSへのデプロイ」の手順でイメージをpushし（`bin/deploy`）、タスクを起動します（`terraform -chdir=infra apply`）。
+
 ## Claude Codeによるコードレビュー
 
 [Claude Code GitHub Action](https://github.com/anthropics/claude-code-action) を使っています。
