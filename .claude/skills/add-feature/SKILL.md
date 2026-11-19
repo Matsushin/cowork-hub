@@ -111,6 +111,8 @@ cd frontend && npm run test:e2e   # 画面の流れを変えたとき
 - CLAUDE.md の「コードレビューの観点」の順（バグ・仕様違反 → セキュリティ → データ整合性 → テスト → パフォーマンス → 読みやすさ）で差分を見直す
 - `swagger/v1/openapi.yaml` と `src/lib/api-schema.ts` を再生成してコミットしたか確認する（CIで検査される）
 - ブランチを切ってコミットし、PRの説明には「何を・なぜ」「確認したこと」「確認できていないこと」を書く
+- 画面を変えたPRでは、ワークフロー `pr-screenshots.yml` が変更前後のキャプチャ（E2Eを変えたなら操作のGIF）をPRにコメントする。
+  コメントが付いたら画像を見て、意図どおりの見た目か確認する。ページを増やしたら `frontend/screenshots/pages.mjs` にも追加する
 - マージはしない（ユーザーが行う）
 
 ## GitHub Actions で実行するとき（Issue のラベル claude-implement から）
