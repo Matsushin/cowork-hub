@@ -160,6 +160,7 @@ terraform -chdir=infra apply
 |---|---|---|
 | `claude-review.yml` | PRの作成・更新時 | 変更をレビューし、該当行へのコメントと総評を日本語で投稿する |
 | `claude.yml` | PR・Issueのコメントやレビュー、Issueの作成・アサインで `@claude` と書いたとき | 質問に答えたり、修正してコミットしたりする |
+| `claude.yml` | Issueにラベル `claude-implement` を付けたとき | Issueの仕様に沿って実装し、テストを通してからPRを作る |
 
 - レビューの観点とプロジェクトの規約は `CLAUDE.md` に書いています
 - 指摘には重要度（【必須】【推奨】【参考】）を付けます

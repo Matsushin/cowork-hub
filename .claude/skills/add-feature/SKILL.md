@@ -112,3 +112,12 @@ cd frontend && npm run test:e2e   # 画面の流れを変えたとき
 - `swagger/v1/openapi.yaml` と `src/lib/api-schema.ts` を再生成してコミットしたか確認する（CIで検査される）
 - ブランチを切ってコミットし、PRの説明には「何を・なぜ」「確認したこと」「確認できていないこと」を書く
 - マージはしない（ユーザーが行う）
+
+## GitHub Actions で実行するとき（Issue のラベル claude-implement から）
+
+- Docker は無い。MySQL はサービスコンテナで起動済み、gem と npm パッケージもインストール済み。
+  `docker compose exec backend` を付けずに、`backend/` で `bundle exec rspec`・`bin/rubocop`・`bin/rails ...` を直接実行する
+- E2E（Playwright）と、ブラウザでの画面確認はできない。PRの「確認できていないこと」に書く
+- フック（PostToolUse）は動かない前提で、手順9の lint と `npm run format:check` を必ず通す
+- 仕様が曖昧で決められない点があれば、推測で実装せずに Issue へ質問をコメントして止める
+- 最後に `gh pr create` で main へのPRを作る（本文に `Closes #Issue番号`）。マージはしない

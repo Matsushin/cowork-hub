@@ -1,0 +1,37 @@
+name: 機能の追加・変更
+description: 機能の追加や変更を依頼する（ラベル claude-implement を付けると Claude Code が実装してPRを作る）
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Claude Code に実装を任せる場合は、作成後にラベル **claude-implement** を付けてください。
+        AIが迷わないよう、仕様と受け入れ条件はできるだけ具体的に書きます（料金・権限・境界値など）。
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: なぜこの変更が必要か
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: 仕様
+      description: 画面・API・業務ルール。誰が使えるか（未ログイン／会員／管理者）も書く
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      description: チェックリストで書く。境界値（時刻ちょうど・月末・上限ちょうど）や異常系も含める
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 補足
+      description: 決まっていないこと、やらないこと、参考資料

@@ -85,6 +85,8 @@
 - 個人用の設定は `.claude/settings.local.json` に書く（コミットしない）
 
 ## GitHub Actionsでの運用メモ
+- Issue にラベル `claude-implement` を付けると、Claude Code がスキル `add-feature` に沿って実装し、PRを作る（`.github/workflows/claude.yml`）。
+  Issue は `.github/ISSUE_TEMPLATE/feature.yml`（背景・仕様・受け入れ条件）で書く。PRには自動レビューが走り、指摘は `@claude` で直させる。マージは人が行う
 - レビュー用・`@claude` 用のワークフローは、mainに入ってから有効になる（PR内で変更しても、そのPRでは動かない）
 - `@claude` のpushは専用GitHub Appのトークンで行うので、CIと自動レビューが起動する
 - ただし公開リポジトリでは、`@claude` のコミット（作者は `github-actions[bot]`。pushはAppのトークン）で起動したワークフローは毎回承認待ちになる。
