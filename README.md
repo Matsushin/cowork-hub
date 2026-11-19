@@ -127,20 +127,32 @@ terraform -chdir=infra destroy                      # すべて削除（デー�
 
 ### 独自ドメインでHTTPS化する
 
-`domain_name` を指定すると、Route 53のホストゾーン・ACM証明書・HTTPSリスナーを作ります。HTTPはHTTPSへリダイレクトし、Next.jsのサーバーからRailsへの通信もHTTPS（`API_ORIGIN=https://<ドメイン>`）になります。Cookieには `Secure` 属性が付きます。
+`domain_name` を指定すると、ACM証明書とHTTPSリスナーを作ります。HTTPはHTTPSへリダイレクトし、Next.jsのサーバーからRailsへの通信もHTTPS（`API_ORIGIN=https://<ドメイン>`）になります。Cookieには `Secure` 属性が付きます。
 
-親ドメイン（例：`example.com`）が**別のAWSアカウント**にある前提で、サブドメイン（例：`coworking.example.com`）だけをこのアカウントに委任します。親ドメインのほかの設定（メールなど）には影響しません。
+DNSの設定方法は、親ドメインのDNSでできることに合わせて2通りから選びます。どちらも親ドメインのほかの設定（メールなど）には影響しません。ACMの証明書は無料です。
+
+| 方法 | 使う場面 | 親ドメインのDNSに追加するもの | 追加の費用 |
+|---|---|---|---|
+| A. Route 53に委任（既定） | 親ドメインがRoute 53など、NSレコードを追加できるDNSにある | NSレコード4件 | ホストゾーン（月60円程度） |
+| B. CNAMEだけ（`use_route53 = false`） | レンタルサーバーのDNSなど、NSレコードを追加できない | CNAMEレコード2件 | なし |
 
 ```bash
 cp infra/terraform.tfvars.example infra/terraform.tfvars
 # terraform.tfvars に domain_name = "coworking.example.com" を書く（.gitignore済み）
+# 方法Bなら use_route53 = false も書く
+```
 
+#### A. Route 53に委任する
+
+サブドメイン（例：`coworking.example.com`）のホストゾーンをこのアカウントに作り、親ドメインから委任してもらいます。
+
+```bash
 # 1. サブドメインのホストゾーンだけを先に作る
 terraform -chdir=infra apply -target=aws_route53_zone.app
 terraform -chdir=infra output delegation_name_servers
 ```
 
-2. 親ドメインがあるAWSアカウントのRoute 53で、親のホストゾーンにNSレコードを追加します。
+2. 親ドメインのDNSで、親のホストゾーンにNSレコードを追加します。
    - レコード名：`coworking`（サブドメイン部分）
    - タイプ：NS
    - 値：上で表示された4つのネームサーバー
@@ -150,7 +162,27 @@ terraform -chdir=infra output delegation_name_servers
 terraform -chdir=infra apply
 ```
 
-費用の追加は、ホストゾーン（月60円程度）だけです。ACMの証明書は無料です。
+#### B. CNAMEだけで設定する（Route 53を使わない）
+
+```bash
+# 1. 証明書とALBを先に作り、DNSに追加するレコードを表示する
+terraform -chdir=infra apply -var desired_count=0 \
+  -target=aws_acm_certificate.app -target=aws_lb.main
+terraform -chdir=infra output dns_records_to_add
+```
+
+2. 親ドメインのDNSに、表示された2件のCNAMEレコードを追加します。
+   - 証明書の検証用（`_xxxx.coworking.example.com.` → `_yyyy.acm-validations.aws.`）
+   - アプリ用（`coworking.example.com.` → ALBのDNS名）
+   - ホスト名をサブドメイン部分だけ書く画面では、末尾の `.example.com.` を除いて入力します。
+   - 検証用のCNAMEは、証明書の更新でも使うので消さないでください。
+
+```bash
+# 3. 残りを作る（DNSに検証用のCNAMEが反映され、証明書が発行されるまで待つ）
+terraform -chdir=infra apply -var desired_count=0
+```
+
+4. 基盤ができたら、上の「AWSへのデプロイ」の手順でイメージをpushし（`bin/deploy`）、タスクを起動します（`terraform -chdir=infra apply`）。
 
 ## Claude Codeによるコードレビュー
 

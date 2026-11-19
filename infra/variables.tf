@@ -40,3 +40,14 @@ variable "domain_name" {
   type        = string
   default     = null
 }
+
+variable "use_route53" {
+  description = <<-EOT
+    domain_name を指定したとき、DNSをRoute 53で管理するか。
+    true：サブドメインのホストゾーンを作り、親ゾーンからNSレコードで委任してもらう。
+    false：Route 53は使わず、親ドメインのDNSに output dns_records_to_add のCNAMEを手で追加する
+    （レンタルサーバーのDNSなど、NSレコードを追加できない場合）
+  EOT
+  type        = bool
+  default     = true
+}
