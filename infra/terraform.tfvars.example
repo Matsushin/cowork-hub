@@ -7,3 +7,9 @@
 # ドメインのDNSにNSレコードを追加できない場合（レンタルサーバーのDNSなど）は false にする。
 # Route 53を使わず、terraform output dns_records_to_add のCNAMEをDNSに手で追加する
 # use_route53 = false
+
+# 監視の通知先（README の「監視とSlack通知」を参照）
+# slack_team_id    = "T0123456789"
+# slack_channel_id = "C0123456789"
+# alert_email      = "you@example.com"
+# monthly_budget_usd = 80
