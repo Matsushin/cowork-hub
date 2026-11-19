@@ -72,12 +72,13 @@ resource "aws_scheduler_schedule" "night_stop" {
   depends_on = [aws_iam_role_policy.scheduler_update_service]
 }
 
-# var.desired_count を変えたとき（`-var desired_count=0` で止める、戻すなど）に、サービスのタスク数を合わせる。
+# var.desired_count を変えたとき（`-var desired_count=0` で止める、戻すなど）と、夜間停止の有効・無効を切り替えたときに、
+# サービスのタスク数を desired_count に合わせる（夜間停止中に無効にしても、タスクが0のまま残らないように）。
 # 作成時にも1回動く（日中に apply する前提。夜間に apply すると、次の停止時刻までタスクが動く）
 resource "terraform_data" "desired_count" {
   for_each = aws_ecs_service.app
 
-  triggers_replace = [var.desired_count]
+  triggers_replace = [var.desired_count, local.night_stop_enabled]
 
   provisioner "local-exec" {
     command = "aws ecs update-service --region ${var.region} --cluster ${aws_ecs_cluster.main.name} --service ${each.value.name} --desired-count ${var.desired_count} --output text --query service.desiredCount"

@@ -145,7 +145,7 @@ EventBridge Scheduler が 20:00 に desiredCount を0にし、3:00 に `desired_
 - 削減できるのは Fargate とタスクのパブリックIPv4の7時間分で、**月1,000円程度**（月8,000〜9,000円 → 7,000〜8,000円）。ALB（約2,800円）と ALB のパブリックIPv4 は止められないので残ります
 - RDS は止めていません。同じ時間に止めても月600〜800円程度しか減らず、起動に5〜10分かかる・止めている間は自動バックアップを取らない・自動チェックアウトがDBに繋がらない、といった注意点が増えるためです
 - 自動チェックアウト（毎時5分）は単発のタスクで動くので、夜間停止中も動きます（seedの拠点は21〜23時まで営業のため、閉店時刻の締めに必要）
-- スケジュールが desiredCount を書き換えるので、Terraform は `desired_count` の差分を無視します（`ignore_changes`）。`desired_count` を変えたときだけ、apply が AWS CLI でサービスに反映します。夜間に apply すると、その値でタスクが起動し、次の 20:00 まで動きます
+- スケジュールが desiredCount を書き換えるので、Terraform は `desired_count` の差分を無視します（`ignore_changes`）。`desired_count` か `night_stop_enabled` を変えたときだけ、apply が AWS CLI でサービスのタスク数を `desired_count` に合わせます（夜間停止中に `night_stop_enabled=false` にしても、すぐ起動します）。夜間にこれらを変えて apply すると、タスクが起動し、次の 20:00 まで動きます
 - 夜間停止中に `bin/deploy` すると、新しいイメージで動くのは翌朝の起動からです
 
 ### 独自ドメインでHTTPS化する
