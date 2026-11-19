@@ -32,9 +32,10 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true
-          # @claude の修正コミットは github-actions[bot] 名義になる。
-          # Actionは既定でボット起点の実行を拒否するため、このボットだけ許可して再レビューさせる
-          allowed_bots: "github-actions[bot]"
+          # Actionは既定でボット起点の実行を拒否するため、次のボットだけ許可してレビューさせる
+          # - github-actions[bot]：@claude の修正コミット
+          # - matsushin-claude-bot[bot]：Issue のラベル claude-implement から作られたPR（専用GitHub Appのトークンでpush・PR作成）
+          allowed_bots: "github-actions[bot],matsushin-claude-bot[bot]"
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
