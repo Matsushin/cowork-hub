@@ -4,6 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-error";
 import { formatHours, yen } from "@/lib/format";
+import { googleMapsUrl } from "@/lib/maps";
 import { apiFetch } from "@/lib/server/api";
 import { getCurrentUser } from "@/lib/server/session";
 import type { LocationDetail, Visit } from "@/lib/types";
@@ -26,6 +27,14 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
         <p className="text-sm text-muted-foreground">{location.prefecture}</p>
         <h1 className="text-2xl font-bold">{location.name}</h1>
         <p className="text-muted-foreground">{location.address}</p>
+        <a
+          href={googleMapsUrl(location.prefecture, location.address)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-primary hover:underline"
+        >
+          Googleマップで開く
+        </a>
         {location.description && <p className="mt-2">{location.description}</p>}
       </div>
 
