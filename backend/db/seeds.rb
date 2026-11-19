@@ -55,10 +55,14 @@ if admin_password
   admin.change_plan!(Plan.find_by!(name: "月額フル")) unless admin.current_plan
 end
 
-unless Rails.env.production?
-  member = User.find_or_create_by!(email_address: "member@example.com") do |u|
+# 会員アカウント。開発では member@example.com、本番ではデモ会員（SEED_DEMO_EMAIL / SEED_DEMO_PASSWORD を指定したときだけ）。
+# デモ会員は非公開で、面談の相手などに個別に伝える。利用履歴と予約のサンプルを入れておく
+member_email = ENV.fetch("SEED_DEMO_EMAIL", "member@example.com")
+member_password = ENV["SEED_DEMO_PASSWORD"] || (Rails.env.production? ? nil : "password123")
+if member_password
+  member = User.find_or_create_by!(email_address: member_email) do |u|
     u.name = "会員 太郎"
-    u.password = "password123"
+    u.password = member_password
   end
   member.change_plan!(drop_in, on: Date.current.beginning_of_month) unless member.current_plan
 
@@ -70,6 +74,19 @@ unless Rails.env.production?
       next unless date.month == Date.current.month
       visit = member.visits.create!(location: first, checked_in_at: date.in_time_zone.change(hour: from))
       visit.check_out!(at: date.in_time_zone.change(hour: to))
+    end
+  end
+
+  # 予約一覧の確認用に、翌日の会議室の予約を1件入れておく（今後の予約が1件もないときだけ）。
+  # ほかの人の予約と重なる時間は避け、空いている時間を10時から順に探す
+  if member.reservations.confirmed.upcoming.none?
+    room = locations.first.spaces.find_by!(name: "会議室（4名）")
+    (10..17).each do |hour|
+      starts_at = Date.tomorrow.in_time_zone.change(hour:)
+      Reservation.reserve!(user: member, space: room, starts_at:, ends_at: starts_at + 2.hours)
+      break
+    rescue Reservation::Conflict
+      next
     end
   end
 end
