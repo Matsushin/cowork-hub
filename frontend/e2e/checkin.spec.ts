@@ -7,11 +7,14 @@ const hourInTokyo = Number(
   new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Tokyo", hour: "numeric", hourCycle: "h23" }).format(new Date()),
 );
 
-test("受付用QRのURLを会員が開いてチェックインし、チェックアウトする", async ({ browser }) => {
+// 会員の操作はテストの page（録画される）で行う。管理者は別のブラウザ（コンテキスト）で開く
+// （browser.newContext() で作ったコンテキストは、PRのキャプチャで録画されないため）
+test("受付用QRのURLを会員が開いてチェックインし、チェックアウトする", async ({ browser, page }) => {
   test.skip(hourInTokyo < SHIBUYA.openHour || hourInTokyo >= SHIBUYA.closeHour - 1, "渋谷の営業時間外");
 
   // 管理者：受付用QRを開く
-  const adminPage = await (await browser.newContext()).newPage();
+  const adminContext = await browser.newContext();
+  const adminPage = await adminContext.newPage();
   await adminPage.goto("/login?next=/admin/locations");
   await login(adminPage, ADMIN);
   await expectLoggedIn(adminPage);
@@ -24,9 +27,9 @@ test("受付用QRのURLを会員が開いてチェックインし、チェック
   await expect(adminPage.getByText(/秒で新しいQRコードに変わります/)).toBeVisible();
   const url = await qr.getAttribute("data-checkin-url");
   expect(url).toMatch(/\/checkin\?location=\d+&code=[0-9a-f]{16}$/);
+  await adminContext.close();
 
   // 会員：QRのURLを開く → ログイン → 確認画面に戻ってチェックイン
-  const page = await (await browser.newContext()).newPage();
   await page.goto(url!);
   await expect(page).toHaveURL(/\/login\?next=/);
   await login(page, MEMBER);
