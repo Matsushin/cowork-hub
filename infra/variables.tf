@@ -77,3 +77,55 @@ variable "use_route53" {
   type        = bool
   default     = true
 }
+
+# ---- 監視（monitoring.tf） ----
+
+variable "slack_team_id" {
+  description = "通知先の Slack ワークスペースID（T から始まる）。AWS コンソールでワークスペースを承認したあとに表示される。null なら Slack 連携を作らない"
+  type        = string
+  default     = null
+}
+
+variable "slack_channel_id" {
+  description = "通知先の Slack チャンネルID（C から始まる。チャンネル詳細の一番下に表示される）。プライベートチャンネルなら /invite @Amazon Q で招待しておく"
+  type        = string
+  default     = null
+}
+
+variable "alert_email" {
+  description = "通知をメールでも受け取る場合のアドレス（任意）。値は terraform.tfvars に書く"
+  type        = string
+  default     = null
+}
+
+variable "latency_p95_threshold_seconds" {
+  description = "応答時間のp95がこの秒数を10分続けて超えたら通知する"
+  type        = number
+  default     = 1
+}
+
+variable "monthly_budget_usd" {
+  description = "AWSアカウント全体の月の予算（USD）。実費が80%を超えたとき、月末の予測が100%を超えたときに通知する"
+  type        = number
+  default     = 80
+}
+
+# ---- Sentry（エラーの調査用。通知は monitoring.tf の CloudWatch から Slack へ） ----
+
+variable "sentry_dsn_backend" {
+  description = "Rails 用の Sentry プロジェクトの DSN。null なら Sentry に送らない。値は terraform.tfvars に書く"
+  type        = string
+  default     = null
+}
+
+variable "sentry_dsn_frontend" {
+  description = "Next.js 用の Sentry プロジェクトの DSN（サーバー側のエラーのみ）。null なら Sentry に送らない"
+  type        = string
+  default     = null
+}
+
+variable "sentry_traces_sample_rate" {
+  description = "性能の記録（トレース）を取るリクエストの割合。無料プランの上限（月500万スパン）に収まるように小さめにする"
+  type        = number
+  default     = 0.1
+}

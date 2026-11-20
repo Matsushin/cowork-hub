@@ -48,3 +48,8 @@ output "admin_password_parameter" {
 output "region" {
   value = var.region
 }
+
+output "alerts_topic_arn" {
+  description = "監視の通知先 SNS トピック（Slack・メールへ送る）"
+  value       = aws_sns_topic.alerts.arn
+}
