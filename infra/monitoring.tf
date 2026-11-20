@@ -132,6 +132,11 @@ resource "aws_cloudwatch_metric_alarm" "alb_elb_5xx" {
   treat_missing_data  = "notBreaching"
   alarm_actions       = local.alarm_actions
   ok_actions          = local.alarm_actions
+
+  # 夜間停止の間はスケジュールが通知を止める（night_stop.tf）ので、apply で戻さない
+  lifecycle {
+    ignore_changes = [actions_enabled]
+  }
 }
 
 # 性能：応答時間の p95 が続けて遅い
@@ -168,6 +173,11 @@ resource "aws_cloudwatch_metric_alarm" "healthy_hosts" {
   treat_missing_data  = "breaching"
   alarm_actions       = local.alarm_actions
   ok_actions          = local.alarm_actions
+
+  # 夜間停止の間はスケジュールが通知を止める（night_stop.tf）ので、apply で戻さない
+  lifecycle {
+    ignore_changes = [actions_enabled]
+  }
 }
 
 # ECS：CPU・メモリの使用率
