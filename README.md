@@ -209,6 +209,43 @@ terraform -chdir=infra apply -var desired_count=0
 
 4. 基盤ができたら、上の「AWSへのデプロイ」の手順でイメージをpushし（`bin/deploy`）、タスクを起動します（`terraform -chdir=infra apply`）。
 
+## 監視とSlack通知
+
+`infra/monitoring.tf` で、CloudWatch のアラームと AWS Budgets の通知を SNS トピックに集め、Amazon Q Developer in chat applications（旧 AWS Chatbot）で Slack に送ります。アプリのエラーの詳しい調査（スタックトレースなど）は Sentry で行います。
+
+| 種類 | 何を見るか | 通知する条件 |
+|---|---|---|
+| アプリのエラー | Rails の 5xx（ログの `Completed 5xx`） | 5分間に1件以上 |
+| | 非同期ジョブの失敗（`Error performing`） | 5分間に1件以上 |
+| | Next.js のサーバー側のエラー（`⨯` の行） | 5分間に1件以上 |
+| 可用性 | ALB：アプリの 5xx / ALB 自身の 5xx（503・504） | 5分間に5件以上 |
+| | 正常なタスクの数（backend / frontend） | 3分続けて0 |
+| 性能 | 応答時間の p95 | 10分続けて1秒超（`latency_p95_threshold_seconds`） |
+| | ECS の CPU / メモリ | 15分続けて80% / 85%超 |
+| | RDS の CPU / 空きメモリ / 空き容量 | 15分続けて80%超 / 64MB未満 / 2GB未満 |
+| 費用 | AWS アカウント全体の月の費用（`monthly_budget_usd`、既定 80ドル） | 実費が80%超、月末の予測が100%超 |
+
+問題が起きたときと、元に戻ったときの両方を通知します。費用はアラーム15件で月200〜300円程度です（ログのメトリクスフィルターは無料、Budgets は2件まで無料）。
+
+### Slack につなぐ
+
+1. AWS コンソールの「Amazon Q Developer in chat applications」で「チャットクライアントを設定」→ Slack を選び、ワークスペースを承認する（Terraform ではできないため、最初に一度だけ手で行う）
+2. 承認後に表示されるワークスペースID（`T`から始まる）と、通知先のチャンネルID（Slack のチャンネル詳細の一番下、`C`から始まる）を `infra/terraform.tfvars` に書く。プライベートチャンネルなら、先に `/invite @Amazon Q` で招待しておく
+
+```hcl
+slack_team_id    = "T0123456789"
+slack_channel_id = "C0123456789"
+```
+
+3. 反映して、試しにアラームを1つ鳴らす
+
+```bash
+terraform -chdir=infra apply
+aws cloudwatch set-alarm-state --alarm-name cowork-hub-alb-target-5xx --state-value ALARM --state-reason "Slack通知のテスト"
+```
+
+数十秒で Slack に通知が届きます。テストで鳴らしたアラームは、次の評価（5分以内）で自動的に OK に戻り、その通知も届きます。
+
 ## Claude Codeによるコードレビュー
 
 [Claude Code GitHub Action](https://github.com/anthropics/claude-code-action) を使っています。
