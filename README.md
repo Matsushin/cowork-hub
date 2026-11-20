@@ -147,6 +147,7 @@ EventBridge Scheduler が 20:00 に desiredCount を0にし、3:00 に `desired_
 - 自動チェックアウト（毎時5分）は単発のタスクで動くので、夜間停止中も動きます（seedの拠点は21〜23時まで営業のため、閉店時刻の締めに必要）
 - スケジュールが desiredCount を書き換えるので、Terraform は `desired_count` の差分を無視します（`ignore_changes`）。`desired_count` か `night_stop_enabled` を変えたときだけ、apply が AWS CLI でサービスのタスク数を `desired_count` に合わせます（夜間停止中に `night_stop_enabled=false` にしても、すぐ起動します）。夜間にこれらを変えて apply すると、タスクが起動し、次の 20:00 まで動きます
 - 夜間停止中に `bin/deploy` すると、新しいイメージで動くのは翌朝の起動からです
+- 監視（下の「監視とSlack通知」）のうち、停止中に鳴り続ける「正常なタスクの数」と「ALB 自身の 5xx」は、停止の2分前（19:58）に通知を止め、起動の10分後（3:10）に戻します。戻した1分後に状態を OK にし直すので、朝の起動に失敗していれば、そこで Slack に通知が届きます（「OK（夜間停止の後、状態を見直す）」に続けて ALARM の2通）。翌朝に通知が戻っているかは `aws cloudwatch describe-alarms --alarm-name-prefix cowork-hub- --query 'MetricAlarms[].[AlarmName,StateValue,ActionsEnabled]' --output table` で確認できます
 
 ### Sentry でエラーを調べる
 
