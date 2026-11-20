@@ -25,4 +25,10 @@ done
 
 echo "==> 反映待ち（数分かかります）"
 aws ecs wait services-stable --region "$REGION" --cluster "$CLUSTER" --services backend frontend
+# 夜間停止中・停止中（desiredCount=0）は、新しいイメージで起動するのは次にタスクを起動したとき
+stopped="$(aws ecs describe-services --region "$REGION" --cluster "$CLUSTER" --services backend frontend \
+  --query 'services[?desiredCount==`0`].serviceName' --output text)"
+if [[ -n "$stopped" ]]; then
+  echo "注意: 停止中のサービスがあります（$stopped）。次に起動したとき（夜間停止なら朝の再開時）から新しいイメージで動きます"
+fi
 echo "完了: $(terraform -chdir=infra output -raw app_url)"

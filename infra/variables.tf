@@ -31,6 +31,32 @@ variable "desired_count" {
   default     = 1
 }
 
+variable "night_stop_enabled" {
+  description = "毎日 night_stop_start〜night_stop_end（日本時間）にタスクを0にして費用を抑えるか（desired_count=0 のときは無効）"
+  type        = bool
+  default     = true
+}
+
+variable "night_stop_start" {
+  description = "夜間停止を始める時刻（日本時間、HH:MM）"
+  type        = string
+  default     = "20:00"
+  validation {
+    condition     = can(regex("^([01][0-9]|2[0-3]):[0-5][0-9]$", var.night_stop_start))
+    error_message = "HH:MM（00:00〜23:59）で指定してください。"
+  }
+}
+
+variable "night_stop_end" {
+  description = "夜間停止を終えてタスクを起動する時刻（日本時間、HH:MM）"
+  type        = string
+  default     = "03:00"
+  validation {
+    condition     = can(regex("^([01][0-9]|2[0-3]):[0-5][0-9]$", var.night_stop_end))
+    error_message = "HH:MM（00:00〜23:59）で指定してください。"
+  }
+}
+
 variable "domain_name" {
   description = <<-EOT
     アプリを公開するドメイン（例: coworking.example.com）。
