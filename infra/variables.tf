@@ -83,3 +83,23 @@ variable "monthly_budget_usd" {
   type        = number
   default     = 80
 }
+
+# ---- Sentry（エラーの調査用。通知は monitoring.tf の CloudWatch から Slack へ） ----
+
+variable "sentry_dsn_backend" {
+  description = "Rails 用の Sentry プロジェクトの DSN。null なら Sentry に送らない。値は terraform.tfvars に書く"
+  type        = string
+  default     = null
+}
+
+variable "sentry_dsn_frontend" {
+  description = "Next.js 用の Sentry プロジェクトの DSN（サーバー側のエラーのみ）。null なら Sentry に送らない"
+  type        = string
+  default     = null
+}
+
+variable "sentry_traces_sample_rate" {
+  description = "性能の記録（トレース）を取るリクエストの割合。無料プランの上限（月500万スパン）に収まるように小さめにする"
+  type        = number
+  default     = 0.1
+}

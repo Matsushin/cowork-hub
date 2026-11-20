@@ -8,6 +8,10 @@
 # Route 53を使わず、terraform output dns_records_to_add のCNAMEをDNSに手で追加する
 # use_route53 = false
 
+# Sentry（README の「Sentry でエラーを調べる」を参照）
+# sentry_dsn_backend  = "https://xxxx@o0.ingest.sentry.io/0"
+# sentry_dsn_frontend = "https://yyyy@o0.ingest.sentry.io/0"
+
 # 監視の通知先（README の「監視とSlack通知」を参照）
 # slack_team_id    = "T0123456789"
 # slack_channel_id = "C0123456789"

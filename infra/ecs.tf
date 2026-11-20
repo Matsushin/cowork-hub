@@ -85,6 +85,17 @@ locals {
   db_secret_arn = aws_db_instance.main.master_user_secret[0].secret_arn
 }
 
+# Sentry（エラーの調査用）。DSN を指定したときだけ環境変数を渡す（未指定なら SDK は何もしない）
+locals {
+  sentry_env = {
+    for app, dsn in { backend = var.sentry_dsn_backend, frontend = var.sentry_dsn_frontend } : app => dsn == null ? [] : [
+      { name = "SENTRY_DSN", value = dsn },
+      { name = "SENTRY_ENVIRONMENT", value = "production" },
+      { name = "SENTRY_TRACES_SAMPLE_RATE", value = tostring(var.sentry_traces_sample_rate) },
+    ]
+  }
+}
+
 resource "aws_ecs_task_definition" "backend" {
   family                   = "${var.project}-backend"
   requires_compatibilities = ["FARGATE"]
@@ -104,7 +115,7 @@ resource "aws_ecs_task_definition" "backend" {
     image        = "${aws_ecr_repository.app["backend"].repository_url}:${var.image_tag}"
     essential    = true
     portMappings = [{ containerPort = 3000, protocol = "tcp" }]
-    environment = [
+    environment = concat([
       { name = "DB_HOST", value = aws_db_instance.main.address },
       { name = "DB_NAME", value = aws_db_instance.main.db_name },
       { name = "DB_USERNAME", value = aws_db_instance.main.username },
@@ -116,7 +127,7 @@ resource "aws_ecs_task_definition" "backend" {
       # メール本文のリンク先
       { name = "APP_URL", value = local.app_origin },
       # SMTP_ADDRESS などを渡すまでメールは実際には送られない（config/environments/production.rb）
-    ]
+    ], local.sentry_env.backend)
     secrets = [
       { name = "DB_PASSWORD", valueFrom = "${local.db_secret_arn}:password::" },
       { name = "SECRET_KEY_BASE", valueFrom = aws_ssm_parameter.secret_key_base.arn },
@@ -153,13 +164,13 @@ resource "aws_ecs_task_definition" "frontend" {
     image        = "${aws_ecr_repository.app["frontend"].repository_url}:${var.image_tag}"
     essential    = true
     portMappings = [{ containerPort = 3000, protocol = "tcp" }]
-    environment = [
+    environment = concat([
       # Server Components / Server Actions からRails APIを呼ぶ接続先（ALB経由で /api/* がRailsに届く）
       # HTTPSが有効なら https://<ドメイン> になり、サーバー間の通信も暗号化される
       { name = "API_ORIGIN", value = local.app_origin },
       # HTTPSが有効ならCookieにSecure属性を付ける
       { name = "COOKIE_SECURE", value = tostring(local.https_enabled) },
-    ]
+    ], local.sentry_env.frontend)
     logConfiguration = {
       logDriver = "awslogs"
       options = {
