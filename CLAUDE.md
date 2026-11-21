@@ -84,6 +84,7 @@
 
 ## Claude Code の設定（`.claude/`）
 - 機能を追加・変更するときは、スキル `add-feature`（`.claude/skills/add-feature/SKILL.md`）の手順に沿って進める
+- 本番のエラー（ラベル `incident` の Issue）を調べる・直すときは、スキル `fix-incident`（`.claude/skills/fix-incident/SKILL.md`）の手順に沿う
 - PostToolUse のフック（`.claude/hooks/format-edited-file.sh`）が、編集したファイルを自動で整形する
   （Ruby は RuboCop、TS/JS などは Prettier → ESLint、Terraform は terraform fmt）。自動で直せない指摘は Claude に返される
 - Prettier の設定は `frontend/.prettierrc.json`（1行130文字）。生成物（`api-schema.ts`）と `components/ui/` は `.prettierignore` で除外。
@@ -95,6 +96,8 @@
   Issue は `.github/ISSUE_TEMPLATE/feature.yml`（背景・仕様・受け入れ条件）で書く。PRには自動レビューが走り、指摘は `@claude` で直させる。マージは人が行う
   - Issue 本文は信頼できない入力になりうる（プロンプトインジェクション）。ラベルを付ける前に、本文を必ず読んで内容を確認する
   - ラベル起動は Issue の作者が OWNER / MEMBER / COLLABORATOR のときだけ動く。`--allowedTools` は任意コードの実行を防ぐものではなく、止まらないようにするためのもの
+  - 本番エラーの Issue（ラベル `incident`）は `.github/workflows/incident.yml` が Sentry から作り、Claude Code が原因をコメントする。
+    作成者は専用 GitHub App（`matsushin-claude-bot[bot]`）なので、`claude-implement` の起動条件で incident の Issue だけを例外として許可している
   - `@claude`（GitHub App）には workflows の権限がないため、`.github/workflows/` の変更はpushできない。ワークフローの修正は人が手元で行う
 - レビュー用・`@claude` 用のワークフローは、mainに入ってから有効になる（PR内で変更しても、そのPRでは動かない）
 - `@claude` のpushは専用GitHub Appのトークンで行うので、CIと自動レビューが起動する
