@@ -275,6 +275,7 @@ aws cloudwatch set-alarm-state --alarm-name cowork-hub-alb-target-5xx --state-va
 | `claude.yml` | PR・Issueのコメントやレビュー、Issueの作成・アサインで `@claude` と書いたとき | 質問に答えたり、修正してコミットしたりする |
 | `claude.yml` | Issueにラベル `claude-implement` を付けたとき | Issueの仕様に沿って実装し、テストを通してからPRを作る |
 | `pr-screenshots.yml` | 画面に関わるファイルが変わったPRの作成・更新時 | 変更前後の画面のキャプチャ（E2Eを変えたなら操作のGIF）をPRにコメントする |
+| `incident.yml` | 30分ごと（夜間停止中を除く） | 本番の新しいエラーを Sentry から Issue にし、原因と修正案をコメントする（下の「本番エラーを Issue にして AI に調べさせる」） |
 
 - ラベル `claude-implement` を付ける前に、Issue 本文を必ず読んで内容を確認してください（本文の指示にClaudeが従うため）。Issueの作者がオーナー・メンバー・コラボレーター以外のときは動きません
 - レビューの観点とプロジェクトの規約は `CLAUDE.md` に書いています
@@ -291,6 +292,36 @@ aws cloudwatch set-alarm-state --alarm-name cowork-hub-alb-target-5xx --state-va
 | `CLAUDE_CODE_OAUTH_TOKEN` | シークレット | Claude Codeの認証トークン。`claude-review.yml` と `claude.yml` がClaudeを呼び出すときに使う（`ANTHROPIC_API_KEY` で代用も可） |
 | `CLAUDE_APP_ID` | 変数（Variables） | 専用GitHub AppのID。設定すると `claude.yml` がAppのトークンを発行し、Claudeのpushでも CI と自動レビューが起動する。未設定なら既定のトークンで動く（その場合、pushではCIが起動しない） |
 | `CLAUDE_APP_PRIVATE_KEY` | シークレット | 専用GitHub Appの秘密鍵。`CLAUDE_APP_ID` とあわせてAppのトークンを発行するために使う |
+| `SENTRY_AUTH_TOKEN` | シークレット | Sentry の個人トークン（スコープ `event:read`）。`incident.yml` がエラーを読むために使う |
+| `SENTRY_ORG` | 変数（Variables） | Sentry の組織の ID かスラッグ。未設定なら `incident.yml` は何もしない |
+| `SENTRY_PROJECTS` | 変数（Variables） | 対象の Sentry プロジェクトの ID かスラッグ（Rails 用と Next.js 用をカンマ区切り） |
+
+### 本番エラーを Issue にして AI に調べさせる
+
+本番のエラーから修正PRまでを、次の流れでつないでいます。
+
+```
+Sentry（本番の未解決エラー）
+  → incident.yml（30分ごと）が Issue を作る（ラベル incident・bug、作成者は専用 GitHub App）
+  → Claude Code が コードを読むだけの権限で原因・影響・修正案・再現テスト案をコメントする
+  → 人がコメントを読んで、ラベル claude-implement を付ける
+  → claude.yml が再現テストを先に書いてから直し、PRを作る（自動レビュー・CI が走る）
+  → 人がマージ・デプロイし、Sentry の issue を Resolved にする
+```
+
+- 調査と修正の手順はスキル `fix-incident`（`.claude/skills/fix-incident/SKILL.md`）にまとめています
+- **修正の開始には人の判断を挟みます**。エラーの文面には外部の利用者が入力した値が混じることがあり、そこに AI への指示を紛れ込ませる攻撃（プロンプトインジェクション）がありうるためです。調査のジョブはファイルの読み取りとその Issue へのコメントしかできません
+- 公開リポジトリのため、Issue にはエラーの種類・文面・アプリのコードのスタックトレース・回数だけを載せ、メールアドレスや長い数字・トークンらしき文字列は伏せます。リクエストの中身や変数の値は載せません（詳しくは Sentry のリンクから）
+- 同じエラーは1件の Issue にまとめます（本文の `<!-- sentry-issue-id: N -->` で判定。閉じた Issue も含む）。1回に作るのは3件まで、対象は最初の発生が24時間以内のものです
+- 試すとき：Actions の「本番エラーの起票と調査」を手動で実行します。`dry_run` が有効（既定）なら Issue は作らず、作る予定の本文をログに出します
+
+Sentry のトークンは、Sentry の User Settings → Personal Tokens で `event:read` だけを付けて作り、手元で登録します（値を画面やチャットに貼らない）。
+
+```bash
+gh secret set SENTRY_AUTH_TOKEN
+gh variable set SENTRY_ORG --body "<組織のIDかスラッグ>"
+gh variable set SENTRY_PROJECTS --body "<Rails用のID>,<Next.js用のID>"
+```
 
 ## 学習用として割り切っている点
 
