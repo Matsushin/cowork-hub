@@ -2,7 +2,10 @@ class SessionsController < ApplicationController
   allow_unauthenticated_access only: :create
 
   def create
-    user = User.authenticate_by(params.permit(:email_address, :password).to_h.symbolize_keys)
+    # authenticate_by は引数が欠けると ArgumentError になるので、文字列で揃っているときだけ呼ぶ
+    email_address = params[:email_address]
+    password = params[:password]
+    user = User.authenticate_by(email_address:, password:) if email_address.is_a?(String) && password.is_a?(String)
     if user
       session = start_new_session_for(user)
       render json: { token: session.token, user: UserSerializer.call(user) }, status: :created
