@@ -12,8 +12,10 @@ resource "aws_lb_target_group" "frontend" {
   target_type = "ip"
   vpc_id      = aws_vpc.main.id
 
+  # Rails に依存しない専用のパス（frontend/src/app/healthz/route.ts）。トップページは Rails の API を呼ぶため、
+  # Rails の起動前にフロントまで不健全と判定され、エラーになる
   health_check {
-    path    = "/"
+    path    = "/healthz"
     matcher = "200"
   }
   deregistration_delay = 30
