@@ -20,6 +20,25 @@ RSpec.describe "認証", type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
+  describe "ログインの入力が不正なとき" do
+    let!(:user) { create(:user, password: "password123") }
+
+    [
+      [ "passwordがない", ->(u) { { email_address: u.email_address } } ],
+      [ "email_addressがない", ->(_) { { password: "password123" } } ],
+      [ "どちらもない", ->(_) { {} } ],
+      [ "passwordが配列", ->(u) { { email_address: u.email_address, password: [ "password123" ] } } ],
+      [ "passwordがハッシュ", ->(u) { { email_address: u.email_address, password: { a: "b" } } } ],
+      [ "email_addressが配列", ->(_) { { email_address: [ "a@example.com" ], password: "password123" } } ]
+    ].each do |name, build|
+      it "#{name}場合も500にならず401を返す" do
+        post "/api/session", params: build.call(user)
+        expect(response).to have_http_status(:unauthorized)
+        expect(json["error"]).to eq "メールアドレスまたはパスワードが正しくありません"
+      end
+    end
+  end
+
   it "トークンなしでは401、ログアウト後のトークンは使えない" do
     get "/api/me"
     expect(response).to have_http_status(:unauthorized)
