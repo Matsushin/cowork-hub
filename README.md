@@ -5,6 +5,9 @@ Claude Codeの学習用に、Rails API＋Next.jsで作り、AWS（ECS Fargate）
 
 > 全国ネットワーク型のコワーキングサービスを題材にした学習用の架空サービスです。実在の企業・サービスとは関係ありません。
 
+**デモ環境**：https://ee-office.matsushin.tech （毎日 20:00〜翌3:00 は停止）
+ボットや検索エンジン避けの Basic 認証をかけています。ID `ee-office`／パスワード `password1122`
+
 ## 機能
 
 | 区分 | 内容 |
@@ -171,7 +174,7 @@ sentry_dsn_frontend = "https://yyyy@o0.ingest.sentry.io/0"
 
 ### Basic 認証とクローラー対策
 
-学習用のサンプルなので、外部の人やボットに見せないよう、本番はサイト全体に Basic 認証をかけています。面談の相手などには、デモ会員と一緒に ID・パスワードを個別に伝えます。
+学習用のサンプルなので、ボットや検索エンジンに見せないよう、本番はサイト全体に Basic 認証をかけています。ID とパスワードは隠すほどのものではないので、この README に載せています（ID `ee-office`／パスワード `password1122`）。デモ会員のパスワードは、引き続き面談の相手などに個別に伝えます。
 
 | 対象 | 守り方 |
 |---|---|
@@ -183,7 +186,7 @@ sentry_dsn_frontend = "https://yyyy@o0.ingest.sentry.io/0"
 - ローカル・CI・E2E では、環境変数（`BASIC_AUTH_USER`・`BASIC_AUTH_PASSWORD`・`INTERNAL_API_KEY`）がないので、どれも無効
 - 有効にするには `infra/terraform.tfvars` に `basic_auth_user = "ee-office"` を書いて apply する。パスワードと API 用のヘッダーの値は Terraform が作って SSM に置く
 
-パスワードの確認：
+パスワードは `infra/terraform.tfvars` の `basic_auth_password` で決めています（省略すると自動で作る）。変えたら `terraform -chdir=infra apply` のあと `aws ecs update-service --cluster cowork-hub --service frontend --force-new-deployment` でタスクを入れ替えます（パスワードはタスクの起動時に読むため）。SSM の値の確認：
 
 ```bash
 aws ssm get-parameter --with-decryption --name /cowork-hub/frontend/BASIC_AUTH_PASSWORD --query Parameter.Value --output text
@@ -192,8 +195,14 @@ aws ssm get-parameter --with-decryption --name /cowork-hub/frontend/BASIC_AUTH_P
 最初に有効にするときは、順番を守ります（ALB の条件を先に変えると、ヘッダーを付けない今のフロントから API が使えなくなる）。
 
 1. `bin/deploy frontend`（環境変数がなければ何もしないので、先に入れても影響しない）
-2. タスクに環境変数を渡す：`terraform -chdir=infra apply -target=aws_iam_role_policy.execution_secrets -target='aws_ecs_service.app["frontend"]'` → 反映を待つ（`aws ecs wait services-stable`）
-3. 残り（ALB の条件）を反映する：`terraform -chdir=infra apply`
+2. タスクに環境変数を渡す：タスク定義だけを先に作り、サービスは AWS CLI で切り替えて、反映を待つ
+   （ECS サービスは ALB のルールに依存しているため、`-target` にサービスを含めると ALB の条件まで同時に変わってしまう）
+   ```bash
+   terraform -chdir=infra apply -target=aws_iam_role_policy.execution_secrets -target=aws_ecs_task_definition.frontend
+   aws ecs update-service --cluster cowork-hub --service frontend --task-definition cowork-hub-frontend
+   aws ecs wait services-stable --cluster cowork-hub --services frontend
+   ```
+3. 残り（ALB の条件）を反映する：`terraform -chdir=infra apply`。ALB のルールの反映には数十秒かかる（その間は外から `/api/*` がまだ通る）
 
 ### 独自ドメインでHTTPS化する
 

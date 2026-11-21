@@ -19,4 +19,5 @@
 # monthly_budget_usd = 80
 
 # サイト全体に Basic 認証をかける（外部の人やボットに見せない）。パスワードは自動で作って SSM に置く
-# basic_auth_user = "ee-office"
+# basic_auth_user     = "ee-office"
+# basic_auth_password = "password1122" # 省略すると自動で作る
