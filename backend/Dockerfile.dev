@@ -2,7 +2,7 @@
 # 開発用のイメージ（compose.yml の backend サービスで使う）
 # 本番用は Dockerfile。こちらはソースをボリュームでマウントし、gemはボリュームにキャッシュする
 
-ARG RUBY_VERSION=4.0.9
+ARG RUBY_VERSION=4.0.10
 FROM docker.io/library/ruby:$RUBY_VERSION-slim
 
 WORKDIR /rails
