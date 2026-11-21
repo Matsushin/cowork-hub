@@ -37,12 +37,12 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * 次を除くすべてのパス
+     * 次を除くすべてのパス（_next 以外は完全一致。`/healthz-foo` のようなパスまで認証の対象外にしないため）
      * - _next/static・_next/image：静的ファイル（Basic 認証の後にしか読み込まれない。ブラウザは同じサイトに認証情報を送る）
      * - healthz：ALB のヘルスチェック（認証情報を送れない）
      * - robots.txt：クローラーに「見ないで」と伝えるため、認証なしで読めるようにする
      * - favicon.ico
      */
-    "/((?!_next/static|_next/image|healthz|robots.txt|favicon.ico).*)",
+    "/((?!_next/static|_next/image|healthz$|robots\\.txt$|favicon\\.ico$).*)",
   ],
 };
