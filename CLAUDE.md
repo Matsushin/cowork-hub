@@ -35,8 +35,11 @@
 - フロントのデータ取得は Server Components（`lib/server/api.ts` の `apiFetch`）、更新は Server Actions（`app/actions/`）で行う。
   ブラウザからRails APIを直接呼ばない。クライアントコンポーネントは操作が必要な部分だけにする
 - 認証トークンは httpOnly Cookie（`lib/server/session.ts`）。ページの認可は `requireUser` / `requireAdmin`
-  - `src/proxy.ts`（旧middleware）はCookieの有無だけを見て、未ログインならページ描画前に `/login?next=...` へ送る（最終確認は requireUser と Rails）。
-    ログインが必要なページを増やしたら `config.matcher` にも追加する
+  - `src/proxy.ts`（旧middleware）は、すべてのページの前で
+    1. Basic 認証（`BASIC_AUTH_USER`・`BASIC_AUTH_PASSWORD` があるときだけ。本番のみ）を確かめ、
+    2. ログインが必要なページ（`lib/login-required.ts`）なら Cookie の有無だけを見て、未ログインならページ描画前に `/login?next=...` へ送る（最終確認は requireUser と Rails）。
+    ログインが必要なページを増やしたら `lib/login-required.ts` に追加する（`config.matcher` はすべてのページ）
+  - Rails の API は外から直接使えない。本番の ALB は、`apiFetch` が付けるヘッダー `X-Internal-Api-Key` の合う `/api/*` だけを Rails に通す
 - フォームは `useActionForm(action, { schema, defaultValues })` ＋ `<FormErrors>` ＋ `<Field>`（React Hook Form＋Zod）。
   `<Field>` は子要素の name でReact Hook Formに登録し、その項目のエラー（ブラウザのチェック → Railsのエラー）を表示する。
   初期値は `<Input defaultValue>` ではなく `defaultValues` で渡す。

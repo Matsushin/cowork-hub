@@ -169,6 +169,32 @@ sentry_dsn_frontend = "https://yyyy@o0.ingest.sentry.io/0"
 
 送信がうまくいかないときは、タスクに `SENTRY_DEBUG=1` を渡すと Next.js 側の送信の様子がログに出ます。
 
+### Basic 認証とクローラー対策
+
+学習用のサンプルなので、外部の人やボットに見せないよう、本番はサイト全体に Basic 認証をかけています。面談の相手などには、デモ会員と一緒に ID・パスワードを個別に伝えます。
+
+| 対象 | 守り方 |
+|---|---|
+| 画面（Next.js） | `frontend/src/proxy.ts` で Basic 認証。ALB のヘルスチェック（`/healthz`）と `robots.txt` は対象外 |
+| API（Rails の `/api/*`） | ALB が、Next.js のサーバーが付けるヘッダー `X-Internal-Api-Key` の合うものだけを Rails に通し、それ以外は 403（`infra/alb.tf`）。ブラウザは Rails を直接呼ばないので、外部から API を直接使えなくなる |
+| 検索エンジン | `robots.txt` ですべて断り、すべての応答に `X-Robots-Tag: noindex, nofollow` を付ける |
+
+- API に Basic 認証をかけないのは、Rails の認証（`Authorization: Bearer`）と同じヘッダーを使ってぶつかるため
+- ローカル・CI・E2E では、環境変数（`BASIC_AUTH_USER`・`BASIC_AUTH_PASSWORD`・`INTERNAL_API_KEY`）がないので、どれも無効
+- 有効にするには `infra/terraform.tfvars` に `basic_auth_user = "ee-office"` を書いて apply する。パスワードと API 用のヘッダーの値は Terraform が作って SSM に置く
+
+パスワードの確認：
+
+```bash
+aws ssm get-parameter --with-decryption --name /cowork-hub/frontend/BASIC_AUTH_PASSWORD --query Parameter.Value --output text
+```
+
+最初に有効にするときは、順番を守ります（ALB の条件を先に変えると、ヘッダーを付けない今のフロントから API が使えなくなる）。
+
+1. `bin/deploy frontend`（環境変数がなければ何もしないので、先に入れても影響しない）
+2. タスクに環境変数を渡す：`terraform -chdir=infra apply -target=aws_iam_role_policy.execution_secrets -target='aws_ecs_service.app["frontend"]'` → 反映を待つ（`aws ecs wait services-stable`）
+3. 残り（ALB の条件）を反映する：`terraform -chdir=infra apply`
+
 ### 独自ドメインでHTTPS化する
 
 `domain_name` を指定すると、ACM証明書とHTTPSリスナーを作ります。HTTPはHTTPSへリダイレクトし、Next.jsのサーバーからRailsへの通信もHTTPS（`API_ORIGIN=https://<ドメイン>`）になります。Cookieには `Secure` 属性が付きます。

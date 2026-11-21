@@ -53,3 +53,8 @@ output "alerts_topic_arn" {
   description = "監視の通知先 SNS トピック（Slack・メールへ送る）"
   value       = aws_sns_topic.alerts.arn
 }
+
+output "basic_auth" {
+  description = "Basic 認証の ID と、パスワードを置いた SSM パラメーター（basic_auth_user を指定したときだけ）"
+  value       = var.basic_auth_user == null ? null : { user = var.basic_auth_user, password_parameter = aws_ssm_parameter.basic_auth_password.name }
+}

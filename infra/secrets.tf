@@ -33,3 +33,28 @@ resource "aws_ssm_parameter" "demo_password" {
   type  = "SecureString"
   value = random_password.demo.result
 }
+
+# Basic 認証のパスワード（basic_auth_user を指定したときに使う。面談の相手などに個別に伝える）
+resource "random_password" "basic_auth" {
+  length  = 16
+  special = false
+}
+
+resource "aws_ssm_parameter" "basic_auth_password" {
+  name  = "/${var.project}/frontend/BASIC_AUTH_PASSWORD"
+  type  = "SecureString"
+  value = random_password.basic_auth.result
+}
+
+# Next.js のサーバーが Rails の API を呼ぶときに付けるヘッダーの値。ALB はこれが付いた /api/* だけを Rails に通す（alb.tf）。
+# ALB の条件では * と ? がワイルドカードになるので、記号を使わない
+resource "random_password" "internal_api_key" {
+  length  = 48
+  special = false
+}
+
+resource "aws_ssm_parameter" "internal_api_key" {
+  name  = "/${var.project}/frontend/INTERNAL_API_KEY"
+  type  = "SecureString"
+  value = random_password.internal_api_key.result
+}

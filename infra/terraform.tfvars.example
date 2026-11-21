@@ -17,3 +17,6 @@
 # slack_channel_id = "C0123456789"
 # alert_email      = "you@example.com"
 # monthly_budget_usd = 80
+
+# サイト全体に Basic 認証をかける（外部の人やボットに見せない）。パスワードは自動で作って SSM に置く
+# basic_auth_user = "ee-office"

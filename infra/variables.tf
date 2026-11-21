@@ -129,3 +129,9 @@ variable "sentry_traces_sample_rate" {
   type        = number
   default     = 0.1
 }
+
+variable "basic_auth_user" {
+  description = "Basic 認証の ID。指定するとサイト全体に Basic 認証をかける（パスワードは自動で作って SSM に置く。確認は README の「Basic 認証とクローラー対策」）。null なら認証なし"
+  type        = string
+  default     = null
+}
