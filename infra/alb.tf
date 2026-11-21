@@ -77,6 +77,9 @@ locals {
   app_listener_arn = local.https_enabled ? aws_lb_listener.https[0].arn : aws_lb_listener.http.arn
 }
 
+# /api/* は、Next.js のサーバーからの呼び出し（ヘッダー X-Internal-Api-Key が合うもの）だけを Rails に通す。
+# ブラウザは Rails を直接呼ばない（Server Components / Server Actions 経由）ので、外部から API を直接使わせない。
+# Basic 認証（frontend/src/proxy.ts）は画面だけにかかり、Rails の Bearer トークンとヘッダーがぶつかるため API にはかけない
 resource "aws_lb_listener_rule" "api" {
   listener_arn = local.app_listener_arn
   priority     = 10
@@ -87,8 +90,36 @@ resource "aws_lb_listener_rule" "api" {
     }
   }
 
+  condition {
+    http_header {
+      http_header_name = "X-Internal-Api-Key"
+      values           = [random_password.internal_api_key.result]
+    }
+  }
+
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.backend.arn
+  }
+}
+
+# ヘッダーが合わない /api/* は Rails に届けずに 403 を返す（このルールがないと Next.js に届いて 404 になる）
+resource "aws_lb_listener_rule" "api_forbidden" {
+  listener_arn = local.app_listener_arn
+  priority     = 20
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
+  }
+
+  action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "application/json"
+      status_code  = "403"
+      message_body = jsonencode({ error = "Forbidden" })
+    }
   }
 }

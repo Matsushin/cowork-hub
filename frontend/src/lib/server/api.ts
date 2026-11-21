@@ -26,6 +26,8 @@ export async function apiFetch<T>(path: string, { method = "GET", body, auth = t
     if (token) headers.Authorization = `Bearer ${token}`;
   }
   if (body !== undefined) headers["Content-Type"] = "application/json";
+  // 本番の ALB は、このヘッダーが付いた /api/* だけを Rails に通す（外部から API を直接使わせない。infra/alb.tf）
+  if (process.env.INTERNAL_API_KEY) headers["X-Internal-Api-Key"] = process.env.INTERNAL_API_KEY;
 
   let res: Response;
   try {
