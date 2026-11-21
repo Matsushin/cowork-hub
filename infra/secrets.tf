@@ -34,7 +34,7 @@ resource "aws_ssm_parameter" "demo_password" {
   value = random_password.demo.result
 }
 
-# Basic 認証のパスワード（basic_auth_user を指定したときに使う。面談の相手などに個別に伝える）
+# Basic 認証のパスワード（basic_auth_user を指定したときに使う。basic_auth_password を指定しなければ自動で作る）
 resource "random_password" "basic_auth" {
   length  = 16
   special = false
@@ -43,7 +43,7 @@ resource "random_password" "basic_auth" {
 resource "aws_ssm_parameter" "basic_auth_password" {
   name  = "/${var.project}/frontend/BASIC_AUTH_PASSWORD"
   type  = "SecureString"
-  value = random_password.basic_auth.result
+  value = coalesce(var.basic_auth_password, random_password.basic_auth.result)
 }
 
 # Next.js のサーバーが Rails の API を呼ぶときに付けるヘッダーの値。ALB はこれが付いた /api/* だけを Rails に通す（alb.tf）。

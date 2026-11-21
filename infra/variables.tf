@@ -135,3 +135,10 @@ variable "basic_auth_user" {
   type        = string
   default     = null
 }
+
+variable "basic_auth_password" {
+  description = "Basic 認証のパスワード。null なら自動で作る。ボットや検索エンジン避けで、隠すほどのものではないので README に載せている。変えたらフロントのタスクを入れ替える（README の「Basic 認証とクローラー対策」）"
+  type        = string
+  default     = null
+  sensitive   = true
+}
