@@ -62,9 +62,12 @@ export function redact(text) {
   return String(text ?? "")
     .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[メールアドレス]")
     .replace(/\b(Bearer|Token|token)\s+[\w\-.~+/=]{8,}/g, "$1 [伏せ字]")
-    .replace(/\b[0-9a-f]{24,}\b/gi, "[伏せ字]")
+    .replace(/\beyJ[\w-]+\.[\w-]+\.[\w-]*/g, "[伏せ字]") // JWT
+    // APIキー・16進・base64 などの長い文字列（数字と英字の両方を含むもの。ファイル名やクラス名は残す）
+    .replace(/\b(?=[\w\-+=]*\d)(?=[\w\-+=]*[A-Za-z])[\w\-+=]{24,}/g, "[伏せ字]")
     .replace(/\b\d{6,}\b/g, "[数字]")
     .replace(/`/g, "'")
+    .replace(/[|\r\n]+/g, " ") // 表やコードブロックを崩さない
     .slice(0, 1000);
 }
 
