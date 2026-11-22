@@ -53,7 +53,7 @@ export function useActionForm<S extends z.ZodType>(
 ) {
   const [state, dispatch, pending] = useActionState(action, initialActionState);
   const form = useForm<FieldValues>({
-    resolver: zodResolver(schema as never) as Resolver<FieldValues>,
+    resolver: zodResolver(schema as never) as unknown as Resolver<FieldValues>,
     defaultValues: defaultValues as DefaultValues<FieldValues>,
     mode: "onTouched", // 一度触った項目は入力のたびにチェックし直す
   });
