@@ -62,7 +62,7 @@ description: ee-office（cowork-hub）の変更をセキュリティの観点で
 
 ## 結果の書き方（ワークフローから呼ばれたとき）
 
-- 指摘は該当行へのインラインコメントで、先頭に重要度（【重大】【注意】【参考】）を付け、「攻撃の筋道」と「直し方」を書く
+- 指摘は該当行へのインラインコメント（`mcp__github_inline_comment__create_inline_comment` に confirmed: true）で、先頭に重要度（【重大】【注意】【参考】）を付け、「攻撃の筋道」と「直し方」を書く
 - 最後に総評を `gh pr comment` で1件だけ書く。形は
 
 ```markdown
