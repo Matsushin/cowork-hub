@@ -91,12 +91,18 @@ jobs:
           (cd frontend && npm update)
           git diff --stat
 
+      # PR のタイトルに使う日付（ランナーは UTC なので、日本時間を渡す）
+      - name: 今日の日付（日本時間）
+        id: today
+        run: echo "date=$(TZ=Asia/Tokyo date +%F)" >> "$GITHUB_OUTPUT"
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             REPO: ${{ github.repository }}
+            今日の日付（日本時間）: ${{ steps.today.outputs.date }}（PR のタイトルの日付にはこれを使う）
 
             週1回の依存ライブラリの更新です（更新はひとつ前のステップで済んでいます）。.claude/skills/weekly-maintenance/SKILL.md の「A. 依存ライブラリの更新」の手順に沿って進めてください。
             テスト環境は準備済みです（MySQL はサービスコンテナで起動、テスト用DB作成済み、gem と npm パッケージもインストール済み）。
@@ -165,12 +171,18 @@ jobs:
           fetch-depth: 100 # この1週間のコミットを見るため
           persist-credentials: false
 
+      # PR のタイトルに使う日付（ランナーは UTC なので、日本時間を渡す）
+      - name: 今日の日付（日本時間）
+        id: today
+        run: echo "date=$(TZ=Asia/Tokyo date +%F)" >> "$GITHUB_OUTPUT"
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             REPO: ${{ github.repository }}
+            今日の日付（日本時間）: ${{ steps.today.outputs.date }}（PR のタイトルの日付にはこれを使う）
 
             週1回のドキュメントの見直しです。.claude/skills/weekly-maintenance/SKILL.md の「B. ドキュメントの見直し」の手順に沿って進めてください。
             直してよいのは README.md と CLAUDE.md だけです（.claude/skills/ は AI の動作やレビューの基準を決めるので、食い違いは本文で知らせるだけ）。

@@ -1,0 +1,20 @@
+{
+  "required_status_checks": {
+    "strict": false,
+    "checks": [
+      { "context": "backend", "app_id": 15368 },
+      { "context": "frontend", "app_id": 15368 },
+      { "context": "e2e", "app_id": 15368 },
+      { "context": "terraform", "app_id": 15368 },
+      { "context": "docker (backend)", "app_id": 15368 },
+      { "context": "docker (frontend)", "app_id": 15368 },
+      { "context": "security-review", "app_id": 15368 }
+    ]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": { "required_approving_review_count": 0 },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_linear_history": false
+}

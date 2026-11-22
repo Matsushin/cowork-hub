@@ -47,7 +47,7 @@ Ruby・Node.js・Docker のベースイメージ・Terraform のバージョン�
      - backend：`Gemfile.lock` の該当の gem の行を `git diff` で見て、元のバージョンに Edit で戻し、`bundle install` で整合を取る
      - frontend：`git checkout -- package-lock.json` で戻してから、戻したいもの以外を `npm update <名前> ...` で個別に上げ直す（`npm install <名前>@<版>` は package.json の範囲を書き換えるので使わない）
    - 戻したものは本文の「見送ったもの」に、失敗の要点と一緒に書く
-5. `/tmp/maintenance/` に出力する。タイトルは「依存ライブラリの更新（YYYY-MM-DD）」。本文は次の形
+5. `/tmp/maintenance/` に出力する。タイトルは「依存ライブラリの更新（YYYY-MM-DD）」（日付はプロンプトで渡される日本時間の日付。手元なら今日の日付）。本文は次の形
 
 ```markdown
 AI による週1回の依存ライブラリの更新です（`.github/workflows/weekly-maintenance.yml`、手順は `.claude/skills/weekly-maintenance/SKILL.md`）。
@@ -93,7 +93,7 @@ README.md と CLAUDE.md が、今のコードと食い違っていないかを�
 3. 食い違いを直す。**事実の食い違いだけを直す**。言い回しの好み、章立ての変更、新しい説明の追加はしない。コードは変えない
    - 判断できないもの（どちらが正しいか分からない、仕様の話になる）は直さず、本文の「人に確かめてほしいこと」に書く
 4. 直すものがなければ、ファイルを作らずに終わる
-5. `/tmp/maintenance/` に出力する。タイトルは「ドキュメントとコードの食い違いを直す（YYYY-MM-DD）」。本文は次の形
+5. `/tmp/maintenance/` に出力する。タイトルは「ドキュメントとコードの食い違いを直す（YYYY-MM-DD）」（日付は A と同じ）。本文は次の形
 
 ```markdown
 AI による週1回のドキュメントの見直しです（`.github/workflows/weekly-maintenance.yml`、手順は `.claude/skills/weekly-maintenance/SKILL.md`）。

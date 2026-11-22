@@ -332,6 +332,24 @@ AI が書いた PR（`claude-implement`・`@claude`・週1回のメンテナン�
 
 - チェックリストはスキル `security-check`（`.claude/skills/security-check/SKILL.md`）にあり、手元の Claude Code でも使えます
 - レビューの基準には、PR の中のものではなく **main のチェックリスト**を使います（PR がチェックリストを弱めて、自分自身を通せないように）
+
+### main のブランチ保護
+
+main には直接 push できず、PR を通す必要があります。次のチェックが通らないとマージできません（管理者も同じ。`enforce_admins`）。
+
+| 必須のチェック | ワークフロー |
+|---|---|
+| `backend`・`frontend`・`e2e`・`terraform`・`docker (backend)`・`docker (frontend)` | `ci.yml` |
+| `security-review`（AI のセキュリティレビュー。【重大】で失敗） | `claude-security-review.yml` |
+
+- PR は必須ですが、承認（レビューの Approve）は0件でよい設定です（1人で開発しているため）。AI の自動レビュー（`review`）は必須にしていません（指摘があっても成功で終わるため）
+- `security-review` は必須のチェックなので、すべての PR で動きます。セキュリティに関係するファイル（コード・依存・インフラ・ワークフロー・`.claude/`）が変わっていなければ、AI を呼ばずに成功で終わります
+- AI のワークフロー（`claude.yml`・`weekly-maintenance.yml`）が push するのは作業用のブランチだけで、main には PR を通してしか入りません
+- 緊急で外す必要があるときは、Settings → Branches で一時的に解除します。設定は次のコマンドで入れています
+
+```bash
+gh api -X PUT repos/Matsushin/cowork-hub/branches/main/protection --input .github/branch-protection.json
+```
 - 通常のレビュー（`claude-review.yml`）とは別のジョブにしています。観点を絞ったほうが見落としが減り、セキュリティの指摘だけでマージを止められるためです
 
 ### セットアップに必要なシークレット・変数
