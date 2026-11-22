@@ -1,0 +1,223 @@
+name: 週1回のメンテナンス（AI）
+
+# 毎週月曜 9:00（日本時間）に、Claude Code に次の2つをやらせて、変更があれば PR にする（手順は .claude/skills/weekly-maintenance）
+#   deps：依存ライブラリの更新（パッチ・マイナーまで）。CI と同じ確認を通し、壊れたら小さく直すか、そのライブラリだけ見送る
+#   docs：README・CLAUDE.md とコードの食い違いを直す（ドキュメントだけ。スキルの食い違いは本文で知らせるだけ）
+#
+# AI に push の権限を渡さない（main にブランチ保護がないため）
+#   - 依存ライブラリの更新（インストール処理）は、シークレットのないステップで AI の前に行う
+#   - AI のジョブ（deps・docs）にあるのは読み取りだけの GITHUB_TOKEN。変更は patch にして成果物（artifact）で渡すだけ
+#   - PR を作るジョブ（*-pr）は別のランナーで、main をきれいに checkout し直し、patch を当てて、変えてよい範囲かを確かめてから push する。
+#     AI や更新したライブラリのコードが作業ツリーや .git（フック・設定）に何かを仕込んでも、push 用のトークンには届かない
+#   - push・PR に使う専用 GitHub App のトークンは、PR を作るジョブでだけ発行する
+# PR はブランチごとに1本で毎週上書きし、マージは人が行う。
+on:
+  schedule:
+    - cron: "0 0 * * 1" # 月曜 0:00 UTC ＝ 9:00 JST
+  workflow_dispatch:
+    inputs:
+      task:
+        description: どの作業をするか
+        type: choice
+        options: [both, deps, docs]
+        default: both
+
+concurrency:
+  group: weekly-maintenance
+  cancel-in-progress: false
+
+jobs:
+  deps:
+    if: github.event_name == 'schedule' || inputs.task != 'docs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      changed: ${{ steps.patch.outputs.changed }}
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ppassword"
+          --health-interval=5s --health-retries=20
+    env:
+      RAILS_ENV: test
+      DB_HOST: 127.0.0.1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: backend
+          bundler-cache: true
+
+      # setup-ruby は Gemfile.lock を変えられない設定（deployment）にするので、更新できるように戻す
+      - name: bundle update できるようにする
+        working-directory: backend
+        run: |
+          bundle config set --local deployment false
+          bundle config set --local frozen false
+
+      - name: テスト用DBを準備
+        working-directory: backend
+        run: bin/rails db:create db:schema:load
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: フロントエンドの依存をインストール
+        working-directory: frontend
+        run: npm ci
+
+      # 更新（新しいバージョンのインストール処理が動く）は、シークレットのないこのステップで先に済ませる。
+      # AI のステップは、更新後の確認と小さな修正・見送りの判断だけを行う
+      - name: 依存ライブラリを更新する（パッチ・マイナーまで。シークレットなし）
+        run: |
+          mkdir -p /tmp/maintenance
+          (cd backend && bundle outdated --only-explicit --parseable > /tmp/maintenance/outdated-backend.txt || true)
+          (cd frontend && npm outdated --json > /tmp/maintenance/outdated-frontend.json || true)
+          (cd backend && bundle update --minor)
+          (cd frontend && npm update)
+          git diff --stat
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            REPO: ${{ github.repository }}
+
+            週1回の依存ライブラリの更新です（更新はひとつ前のステップで済んでいます）。.claude/skills/weekly-maintenance/SKILL.md の「A. 依存ライブラリの更新」の手順に沿って進めてください。
+            テスト環境は準備済みです（MySQL はサービスコンテナで起動、テスト用DB作成済み、gem と npm パッケージもインストール済み）。
+            変えてよいのは backend/ と frontend/ の下だけです（Dockerfile は除く）。
+            結果は手順の通り /tmp/maintenance/pr-title.txt と /tmp/maintenance/pr-body.md に書きます。コミット・push・PR の作成はしません（別のジョブが行う）。
+            日本語で書きます。
+          claude_args: |
+            --max-turns 80
+            --allowedTools "Read,Glob,Grep,Edit(/backend/**),Edit(/frontend/**),Write(/backend/**),Write(/frontend/**),Write(//tmp/maintenance/**),Bash(cd:*),Bash(bundle outdated:*),Bash(bundle update:*),Bash(bundle install:*),Bash(bundle exec rspec:*),Bash(bin/rubocop:*),Bash(bin/brakeman:*),Bash(bin/bundler-audit:*),Bash(bin/rails:*),Bash(npm outdated:*),Bash(npm update:*),Bash(npm ci:*),Bash(npm audit:*),Bash(npm run:*),Bash(npm test:*),Bash(npx tsc:*),Bash(git status:*),Bash(git diff:*),Bash(git checkout --:*)"
+
+      - name: 変更を patch にする
+        id: patch
+        run: bash .github/scripts/maintenance-patch.sh "$RUNNER_TEMP/maintenance"
+
+      - uses: actions/upload-artifact@v7
+        if: steps.patch.outputs.changed == 'true'
+        with:
+          name: maintenance-deps
+          path: ${{ runner.temp }}/maintenance/
+          retention-days: 7
+
+  deps-pr:
+    needs: deps
+    if: needs.deps.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: maintenance-deps
+          path: ${{ runner.temp }}/maintenance
+
+      # push と PR の作成は専用 GitHub App のトークンで行う（GITHUB_TOKEN だと PR に CI と自動レビューが走らない）
+      - name: GitHub Appのトークンを発行
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.CLAUDE_APP_ID }}
+          private-key: ${{ secrets.CLAUDE_APP_PRIVATE_KEY }}
+
+      - name: PR を作る
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        # backend/ と frontend/ の下だけ（Dockerfile を除く）
+        run: bash .github/scripts/open-maintenance-pr.sh maintenance/deps "$RUNNER_TEMP/maintenance" '^(backend|frontend)/' '(^|/)Dockerfile$'
+
+  docs:
+    if: github.event_name == 'schedule' || inputs.task != 'deps'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      changed: ${{ steps.patch.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 100 # この1週間のコミットを見るため
+          persist-credentials: false
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            REPO: ${{ github.repository }}
+
+            週1回のドキュメントの見直しです。.claude/skills/weekly-maintenance/SKILL.md の「B. ドキュメントの見直し」の手順に沿って進めてください。
+            直してよいのは README.md と CLAUDE.md だけです（.claude/skills/ は AI の動作やレビューの基準を決めるので、食い違いは本文で知らせるだけ）。
+            結果は手順の通り /tmp/maintenance/pr-title.txt と /tmp/maintenance/pr-body.md に書きます。コミット・push・PR の作成はしません（別のジョブが行う）。
+            日本語で書きます。
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Read,Glob,Grep,Edit(/README.md),Edit(/CLAUDE.md),Write(//tmp/maintenance/**),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git status:*)"
+
+      - name: 変更を patch にする
+        id: patch
+        run: bash .github/scripts/maintenance-patch.sh "$RUNNER_TEMP/maintenance"
+
+      - uses: actions/upload-artifact@v7
+        if: steps.patch.outputs.changed == 'true'
+        with:
+          name: maintenance-docs
+          path: ${{ runner.temp }}/maintenance/
+          retention-days: 7
+
+  docs-pr:
+    needs: docs
+    if: needs.docs.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: maintenance-docs
+          path: ${{ runner.temp }}/maintenance
+
+      - name: GitHub Appのトークンを発行
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.CLAUDE_APP_ID }}
+          private-key: ${{ secrets.CLAUDE_APP_PRIVATE_KEY }}
+
+      - name: PR を作る
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        # README.md・CLAUDE.md だけ
+        run: bash .github/scripts/open-maintenance-pr.sh maintenance/docs "$RUNNER_TEMP/maintenance" '^(README\.md|CLAUDE\.md)$'
