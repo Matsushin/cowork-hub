@@ -10,6 +10,10 @@ name: 本番エラーの起票と調査
 # 必要な設定（README の「本番エラーを Issue にして AI に調べさせる」）
 #   secrets.SENTRY_AUTH_TOKEN：Sentry の個人トークン（event:read）
 #   vars.SENTRY_ORG / vars.SENTRY_PROJECTS：組織とプロジェクト（ID かスラッグ。プロジェクトはカンマ区切り）
+#
+# 起動のしかた：AWS の EventBridge が30分ごとに workflow_dispatch で起動する（infra/incident_dispatch.tf）。
+#   GitHub のスケジュール実行（下の cron）は混んでいると大きく遅れたり飛ばされたりする（30分ごとの予定が1日に数回だった）ので、
+#   cron は AWS 側が止まったときの予備として残している。両方から起動しても、同じエラーは1件の Issue にまとめるので重複しない
 on:
   schedule:
     # 夜間停止（20:00〜翌3:00 JST）の間はエラーが起きないので動かさない（UTC の 18〜23時・0〜10時 ＝ JST 3:07〜19:37）

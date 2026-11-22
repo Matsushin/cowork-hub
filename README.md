@@ -311,7 +311,7 @@ aws cloudwatch set-alarm-state --alarm-name cowork-hub-alb-target-5xx --state-va
 | `claude.yml` | Issueにラベル `claude-implement` を付けたとき | Issueの仕様に沿って実装し、テストを通してからPRを作る |
 | `pr-screenshots.yml` | 画面に関わるファイルが変わったPRの作成・更新時 | 変更前後の画面のキャプチャ（E2Eを変えたなら操作のGIF）をPRにコメントする |
 | `claude-security-review.yml` | コード・インフラ・ワークフローが変わったPRの作成・更新時 | セキュリティの観点だけでレビューし、【重大】の指摘があればチェックを失敗させる（下の「AI が書いたコードのセキュリティチェック」） |
-| `incident.yml` | 30分ごと（夜間停止中を除く） | 本番の新しいエラーを Sentry から Issue にし、原因と修正案をコメントする（下の「本番エラーを Issue にして AI に調べさせる」） |
+| `incident.yml` | 30分ごと（夜間停止中を除く。AWS の EventBridge から起動） | 本番の新しいエラーを Sentry から Issue にし、原因と修正案をコメントする（下の「本番エラーを Issue にして AI に調べさせる」） |
 | `weekly-maintenance.yml` | 毎週月曜 9:00（日本時間） | 依存ライブラリの更新と、ドキュメントとコードの食い違いの修正を AI が行い、変更があれば PR にする（下の「週1回のメンテナンスを AI にやらせる」） |
 
 - ラベル `claude-implement` を付ける前に、Issue 本文を必ず読んで内容を確認してください（本文の指示にClaudeが従うため）。Issueの作者がオーナー・メンバー・コラボレーター以外のときは動きません
@@ -387,7 +387,7 @@ gh api -X PUT repos/Matsushin/cowork-hub/branches/main/protection --input .githu
 
 ```
 Sentry（本番の未解決エラー）
-  → incident.yml（30分ごと）が Issue を作る（ラベル incident・bug、作成者は専用 GitHub App）
+  → incident.yml（30分ごと。AWS の EventBridge から起動）が Issue を作る（ラベル incident・bug、作成者は専用 GitHub App）
   → Claude Code が コードを読むだけの権限で原因・影響・修正案・再現テスト案をコメントする
   → 人がコメントを読んで、ラベル claude-implement を付ける
   → claude.yml が再現テストを先に書いてから直し、PRを作る（自動レビュー・CI が走る）
@@ -398,6 +398,8 @@ Sentry（本番の未解決エラー）
 - **修正の開始には人の判断を挟みます**。エラーの文面には外部の利用者が入力した値が混じることがあり、そこに AI への指示を紛れ込ませる攻撃（プロンプトインジェクション）がありうるためです。調査のジョブはファイルの読み取りとその Issue へのコメントしかできません
 - 公開リポジトリのため、Issue にはエラーの種類・文面・アプリのコードのスタックトレース・回数だけを載せ、メールアドレスや長い数字・トークンらしき文字列は伏せます。リクエストの中身や変数の値は載せません（詳しくは Sentry のリンクから）
 - 同じエラーは1件の Issue にまとめます（本文の `<!-- sentry-issue-id: N -->` で判定。閉じた Issue も含む）。1回に作るのは3件まで、対象は最初の発生が24時間以内のものです
+- **起動は AWS から**：GitHub Actions のスケジュール実行は、混んでいると大きく遅れたり飛ばされたりします（30分ごとの予定が、実際には1日に数回しか動いていませんでした）。そこで EventBridge のルールが30分ごとに GitHub の API（`workflow_dispatch`）を呼びます（`infra/incident_dispatch.tf`）。コードは持たず、起動に失敗すると Slack に通知します。ワークフローの cron は予備として残しています
+  - 必要なもの：GitHub の fine-grained personal access token（対象は このリポジトリだけ、権限は Actions の Read and write だけ）を `infra/terraform.tfvars` の `github_dispatch_token` に書いて `terraform -chdir=infra apply`。期限が切れたら作り直して同じように反映します
 - 試すとき：Actions の「本番エラーの起票と調査」を手動で実行します。`dry_run` が有効（既定）なら Issue は作らず、作る予定の本文をログに出します
 
 Sentry のトークンは、Sentry の User Settings → Personal Tokens で `event:read` だけを付けて作り、手元で登録します（値を画面やチャットに貼らない）。
