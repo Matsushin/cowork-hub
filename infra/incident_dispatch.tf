@@ -7,6 +7,7 @@
 #   対象リポジトリ：Matsushin/cowork-hub だけ／権限：Actions の Read and write だけ
 #   terraform.tfvars の github_dispatch_token に書く（.gitignore 済み。値はチャットや画面に貼らない）
 #   未設定なら、このファイルのリソースは作らない
+#   トークンは Terraform の state に平文で入る（state は手元のファイルだけで、コミットしない）。期限が切れたらアラームが鳴るので、作り直して apply する
 # 費用：API destination の呼び出しは月に約1,200回で、ほぼ0円。トークンの保管（Secrets Manager）が月 $0.40 ほど
 
 locals {
@@ -106,7 +107,7 @@ resource "aws_cloudwatch_metric_alarm" "incident_dispatch_failed" {
   metric_name         = "FailedInvocations"
   dimensions          = { RuleName = aws_cloudwatch_event_rule.incident_dispatch[0].name }
   statistic           = "Sum"
-  period              = 3600
+  period              = 1800 # 起動の間隔（30分）に合わせる
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
