@@ -331,6 +331,7 @@ AI が書いた PR（`claude-implement`・`@claude`・週1回のメンテナン�
 | 秘密情報 | GitHub の設定 | secret scanning と push protection（有効） |
 
 - チェックリストはスキル `security-check`（`.claude/skills/security-check/SKILL.md`）にあり、手元の Claude Code でも使えます
+- レビューの基準には、PR の中のものではなく **main のチェックリスト**を使います（PR がチェックリストを弱めて、自分自身を通せないように）
 - 通常のレビュー（`claude-review.yml`）とは別のジョブにしています。観点を絞ったほうが見落としが減り、セキュリティの指摘だけでマージを止められるためです
 
 ### セットアップに必要なシークレット・変数
@@ -380,12 +381,13 @@ gh variable set SENTRY_PROJECTS --body "<Rails用のID>,<Next.js用のID>"
 | ジョブ | 内容 | PR のブランチ |
 |---|---|---|
 | deps | 依存ライブラリ（gem・npm）をパッチ・マイナーまで上げ、CI と同じ確認（テスト・RuboCop・Brakeman・bundler-audit・lint・型・ビルド）を通す。壊れたら小さく直すか、そのライブラリだけ見送る。メジャーの更新は PR の本文で知らせるだけ | `maintenance/deps` |
-| docs | この1週間のコミットを見て、README・CLAUDE.md・スキルに書かれたコマンド・パス・バージョンなどがコードと食い違っていないかを確かめ、事実の食い違いだけを直す | `maintenance/docs` |
+| docs | この1週間のコミットを見て、README・CLAUDE.md に書かれたコマンド・パス・バージョンなどがコードと食い違っていないかを確かめ、事実の食い違いだけを直す | `maintenance/docs` |
 
 - **AI にコミット・push の権限を渡しません**（main にブランチ保護がないため）。AI はファイルを変えて PR のタイトルと本文を `/tmp/maintenance/` に書くまでです
+  - 依存ライブラリの更新（新しいバージョンのインストール処理が動く）は、シークレットのないステップで AI の前に済ませます。ただしテストの実行では更新後のコードが動くので、AI のステップの Claude のトークンを完全には守れません（公開リポジトリの CI と同じ前提）
   - AI のジョブにあるのは読み取りだけの `GITHUB_TOKEN` です。変更は patch にして成果物（artifact）で渡すだけです（`.github/scripts/maintenance-patch.sh`）
   - PR を作るのは別のジョブです。別のランナーで main をきれいに checkout し直し、patch を当てて、変えてよい範囲かを確かめてから push します（`.github/scripts/open-maintenance-pr.sh`）。AI や更新したライブラリのコードが作業ツリーや `.git`（フック・設定）に何かを仕込んでも、push 用の専用 GitHub App のトークンには届きません
-- 変えてよい範囲を決めています（deps は `backend/`・`frontend/` の下で Dockerfile を除く、docs は README.md・CLAUDE.md・`.claude/skills/`）。範囲の外のファイルが変わっていたら（名前の変更は変更前のパスも見ます）PR を作らずに失敗します
+- 変えてよい範囲を決めています（deps は `backend/`・`frontend/` の下で Dockerfile を除く、docs は README.md・CLAUDE.md だけ。スキルは AI の動作やセキュリティレビューの基準を決めるので、食い違いは PR の本文で知らせるだけ）。範囲の外のファイルが変わっていたら（名前の変更は変更前のパスも見ます）PR を作らずに失敗します
 - PR はブランチごとに1本（ラベル `maintenance`）で、毎週上書きします。このブランチに手でコミットを積まないでください。マージは人が行います
 - 変える必要がなければ PR は作りません
 - 試すとき：Actions の「週1回のメンテナンス（AI）」を手動で実行します（`task` で deps・docs のどちらかだけにもできます）

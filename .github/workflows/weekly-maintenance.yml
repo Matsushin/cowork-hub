@@ -2,9 +2,10 @@ name: 週1回のメンテナンス（AI）
 
 # 毎週月曜 9:00（日本時間）に、Claude Code に次の2つをやらせて、変更があれば PR にする（手順は .claude/skills/weekly-maintenance）
 #   deps：依存ライブラリの更新（パッチ・マイナーまで）。CI と同じ確認を通し、壊れたら小さく直すか、そのライブラリだけ見送る
-#   docs：README・CLAUDE.md・スキルとコードの食い違いを直す（ドキュメントだけ）
+#   docs：README・CLAUDE.md とコードの食い違いを直す（ドキュメントだけ。スキルの食い違いは本文で知らせるだけ）
 #
 # AI に push の権限を渡さない（main にブランチ保護がないため）
+#   - 依存ライブラリの更新（インストール処理）は、シークレットのないステップで AI の前に行う
 #   - AI のジョブ（deps・docs）にあるのは読み取りだけの GITHUB_TOKEN。変更は patch にして成果物（artifact）で渡すだけ
 #   - PR を作るジョブ（*-pr）は別のランナーで、main をきれいに checkout し直し、patch を当てて、変えてよい範囲かを確かめてから push する。
 #     AI や更新したライブラリのコードが作業ツリーや .git（フック・設定）に何かを仕込んでも、push 用のトークンには届かない
@@ -79,6 +80,17 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      # 更新（新しいバージョンのインストール処理が動く）は、シークレットのないこのステップで先に済ませる。
+      # AI のステップは、更新後の確認と小さな修正・見送りの判断だけを行う
+      - name: 依存ライブラリを更新する（パッチ・マイナーまで。シークレットなし）
+        run: |
+          mkdir -p /tmp/maintenance
+          (cd backend && bundle outdated --only-explicit --parseable > /tmp/maintenance/outdated-backend.txt || true)
+          (cd frontend && npm outdated --json > /tmp/maintenance/outdated-frontend.json || true)
+          (cd backend && bundle update --minor)
+          (cd frontend && npm update)
+          git diff --stat
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -86,7 +98,7 @@ jobs:
           prompt: |
             REPO: ${{ github.repository }}
 
-            週1回の依存ライブラリの更新です。.claude/skills/weekly-maintenance/SKILL.md の「A. 依存ライブラリの更新」の手順に沿って進めてください。
+            週1回の依存ライブラリの更新です（更新はひとつ前のステップで済んでいます）。.claude/skills/weekly-maintenance/SKILL.md の「A. 依存ライブラリの更新」の手順に沿って進めてください。
             テスト環境は準備済みです（MySQL はサービスコンテナで起動、テスト用DB作成済み、gem と npm パッケージもインストール済み）。
             変えてよいのは backend/ と frontend/ の下だけです（Dockerfile は除く）。
             結果は手順の通り /tmp/maintenance/pr-title.txt と /tmp/maintenance/pr-body.md に書きます。コミット・push・PR の作成はしません（別のジョブが行う）。
@@ -161,12 +173,12 @@ jobs:
             REPO: ${{ github.repository }}
 
             週1回のドキュメントの見直しです。.claude/skills/weekly-maintenance/SKILL.md の「B. ドキュメントの見直し」の手順に沿って進めてください。
-            直してよいのは README.md・CLAUDE.md・.claude/skills/ の下のファイルだけです。
+            直してよいのは README.md と CLAUDE.md だけです（.claude/skills/ は AI の動作やレビューの基準を決めるので、食い違いは本文で知らせるだけ）。
             結果は手順の通り /tmp/maintenance/pr-title.txt と /tmp/maintenance/pr-body.md に書きます。コミット・push・PR の作成はしません（別のジョブが行う）。
             日本語で書きます。
           claude_args: |
             --max-turns 40
-            --allowedTools "Read,Glob,Grep,Edit(/README.md),Edit(/CLAUDE.md),Edit(/.claude/skills/**),Write(//tmp/maintenance/**),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git status:*)"
+            --allowedTools "Read,Glob,Grep,Edit(/README.md),Edit(/CLAUDE.md),Write(//tmp/maintenance/**),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git status:*)"
 
       - name: 変更を patch にする
         id: patch
@@ -207,5 +219,5 @@ jobs:
       - name: PR を作る
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        # README.md・CLAUDE.md・.claude/skills/ だけ
-        run: bash .github/scripts/open-maintenance-pr.sh maintenance/docs "$RUNNER_TEMP/maintenance" '^(README\.md$|CLAUDE\.md$|\.claude/skills/)'
+        # README.md・CLAUDE.md だけ
+        run: bash .github/scripts/open-maintenance-pr.sh maintenance/docs "$RUNNER_TEMP/maintenance" '^(README\.md|CLAUDE\.md)$'

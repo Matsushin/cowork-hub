@@ -10,7 +10,7 @@ description: ee-office（cowork-hub）の週1回のメンテナンスを AI が�
 | 作業 | ブランチ | AI ができること |
 |---|---|---|
 | 依存ライブラリの更新 | `maintenance/deps` | ファイルの読み書き、bundle・npm、テスト・静的解析の実行 |
-| ドキュメントの見直し | `maintenance/docs` | ファイルを読む、git の履歴を見る、ドキュメントだけ書き換える |
+| ドキュメントの見直し | `maintenance/docs` | ファイルを読む、git の履歴を見る、README.md と CLAUDE.md だけ書き換える |
 
 **AI はコミット・push・PR の作成をしない。** 変更をファイルに残し、PR のタイトルと本文を `/tmp/maintenance/` に書くところまで。
 変更は patch にして別のジョブに渡し、そちらが main をきれいに checkout し直して patch を当て、変えてよい範囲かを確かめてからコミット・push・PR を行う。main にブランチ保護がないため、AI に push の権限を渡さない。
@@ -31,13 +31,11 @@ PR はブランチごとに1本で、毎週上書きされる（`--force` で pu
 対象は backend（`Gemfile.lock`）と frontend（`package-lock.json`）。**パッチ・マイナーの更新まで**。メジャーの更新は行わず、PR の本文で知らせるだけ。
 Ruby・Node.js・Docker のベースイメージ・Terraform のバージョンは対象外（人が判断する）。
 
-1. 更新前の状態を記録する
-   - backend：`bundle outdated --only-explicit --parseable`
-   - frontend：`npm outdated --json`（更新が残っているときは終了コードが 1 になるが、失敗ではない）
-2. 更新する
-   - backend：`bundle update --minor`（Gemfile の指定の範囲で、メジャーを上げない）
-   - frontend：`npm update`（package.json の `^` の範囲で、メジャーを上げない）
-   - `git diff --stat` で何が変わったかを確かめる。何も変わらなければ、ここで終わる（ファイルを作らない）
+1. 更新はワークフローのひとつ前のステップで済んでいる（新しいバージョンのインストール処理を、シークレットのある AI のステップで動かさないため）
+   - 更新前の状態：`/tmp/maintenance/outdated-backend.txt`（`bundle outdated --only-explicit --parseable`）と `/tmp/maintenance/outdated-frontend.json`（`npm outdated --json`）
+   - 行った更新：backend は `bundle update --minor`、frontend は `npm update`（どちらもメジャーを上げない）
+   - 手元で行うときは、この2つを自分で実行する
+2. `git diff --stat` と `git diff backend/Gemfile.lock` などで何が変わったかを確かめる。何も変わっていなければ、ここで終わる（ファイルを作らない）
 3. CI と同じ確認をする。すべて通るまで次に進まない
    - backend：`bundle exec rspec`、`bin/rubocop`、`bin/brakeman --no-pager`、`bin/bundler-audit check --update`
    - backend：`bin/rails rswag:specs:swaggerize` のあと `git diff --stat swagger/` で、仕様書が変わっていないか（変わったら差分を本文に書く）
@@ -84,7 +82,7 @@ AI による週1回の依存ライブラリの更新です（`.github/workflows/
 
 ## B. ドキュメントの見直し
 
-README.md、CLAUDE.md、`.claude/skills/*/SKILL.md` が、今のコードと食い違っていないかを確かめて直す。
+README.md と CLAUDE.md が、今のコードと食い違っていないかを確かめて直す。`.claude/skills/*/SKILL.md` も照らし合わせるが、**直さずに本文の「人に確かめてほしいこと」に書く**（スキルは AI の動作やセキュリティレビューの基準を決めるので、AI が自動で書き換えない）。
 
 1. この1週間の変更を見る：`git log --since="8 days ago" --stat --format="%h %s"`。コードを変えたのにドキュメントを変えていないコミットに注目する
 2. ドキュメントに書かれた事実をコードと照らし合わせる。特に
