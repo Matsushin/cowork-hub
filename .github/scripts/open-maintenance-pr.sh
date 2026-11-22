@@ -13,19 +13,21 @@ allowed="$3"
 denied="${4:-}"
 label=maintenance
 
-# patch が触るファイル（名前の変更は「削除＋追加」として両方を見る）が、決まった範囲の中か
-files=$(git apply --numstat "$dir/changes.patch" | cut -f3)
+# patch を当ててから、実際に変わったファイル（名前の変更は「削除＋追加」として両方）が決まった範囲の中かを確かめる。
+# patch の中身（numstat の表示など）は信頼しない。AI のジョブで作られた patch は、名前の変更などで範囲を偽れるため
+git apply --index "$dir/changes.patch"
+files=$(git diff --cached --name-only --no-renames)
 outside=$(echo "$files" | grep -vE "$allowed" || true)
 if [ -n "$denied" ]; then
   outside=$(printf '%s\n%s\n' "$outside" "$(echo "$files" | grep -E "$denied" || true)" | sed '/^$/d')
 fi
 if [ -n "$outside" ]; then
+  git reset --quiet --hard
   echo "::error::変えてよい範囲の外のファイルが変わっています。PR は作りません:"
   echo "$outside"
   exit 1
 fi
 
-git apply --index "$dir/changes.patch"
 echo "変わったファイル："
 git diff --cached --stat
 

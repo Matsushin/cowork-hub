@@ -208,4 +208,4 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         # README.md・CLAUDE.md・.claude/skills/ だけ
-        run: bash .github/scripts/open-maintenance-pr.sh maintenance/docs "$RUNNER_TEMP/maintenance" '^(README\.md|CLAUDE\.md|\.claude/skills/)'
+        run: bash .github/scripts/open-maintenance-pr.sh maintenance/docs "$RUNNER_TEMP/maintenance" '^(README\.md$|CLAUDE\.md$|\.claude/skills/)'
