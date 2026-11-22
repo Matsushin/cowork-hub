@@ -61,7 +61,7 @@
 - 月次の集計（請求 `MonthlyBill`・管理の売上）は `?month=YYYY-MM`（`MonthParam`）で受け取る
 - 画面の文言・エラーメッセージは日本語。UIはshadcn/uiのコンポーネントを使う
 - 非同期処理は Active Job ＋ Solid Queue（キューはアプリと同じDB。ワーカーはPumaの中で動く：`config/puma.rb`）。
-  メールは `deliver_later` で送る。開発環境は letter_opener（実際には送らずブラウザで開く）、テストは `have_enqueued_mail` で確認する。
+  メールは `deliver_later` で送る。開発環境は Docker なら Mailpit（SMTP。http://localhost:8025 で確認）、ホストで直接動かすときは letter_opener（ブラウザで開く）、テストは `have_enqueued_mail` で確認する。
   本番は `SMTP_ADDRESS` などの環境変数を渡すまで送信しない
 - 秘密情報はコミットしない（本番はSSM / Secrets Manager経由）
 
