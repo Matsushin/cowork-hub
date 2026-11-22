@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# weekly-maintenance.yml から呼ばれ、AI が残した変更をコミットして PR にする（AI に push の権限を渡さないため、ここは決まったコマンドだけ）
-#   使い方：open-maintenance-pr.sh <ブランチ名>
+# weekly-maintenance.yml から呼ばれ、AI が残した変更をコミットして PR にする
+# （AI に push の権限を渡さないため、ここは決まったコマンドだけ。ワークフローは AI の前に作業ツリーの外へ写したものを実行する）
+#   使い方：open-maintenance-pr.sh <ブランチ名> <変えてよいパスの正規表現> [除外するパスの正規表現]
 #   AI の出力：/tmp/maintenance/pr-title.txt・pr-body.md（ないときは、変える必要がなかったということ）
+#   GH_TOKEN：専用 GitHub App のトークン（push と PR の作成に使う）
 # ブランチは毎週上書きする（--force）。同じブランチの PR が開いていれば、タイトルと本文を更新する。
 set -euo pipefail
 
 branch="$1"
+allowed="$2"
+denied="${3:-}"
 out=/tmp/maintenance
 label=maintenance
 
@@ -20,11 +24,27 @@ if git diff --cached --quiet; then
   echo "変更がないため、PR は作りません"
   exit 0
 fi
+echo "変わったファイル："
+git diff --cached --stat
+
+# 決まった範囲の外のファイルが変わっていたら、PR を作らずに失敗する
+changed=$(git diff --cached --name-only)
+outside=$(echo "$changed" | grep -vE "$allowed" || true)
+if [ -n "$denied" ]; then
+  outside=$(printf '%s\n%s\n' "$outside" "$(echo "$changed" | grep -E "$denied" || true)" | sed '/^$/d')
+fi
+if [ -n "$outside" ]; then
+  echo "::error::変えてよい範囲の外のファイルが変わっています。PR は作りません:"
+  echo "$outside"
+  exit 1
+fi
 
 bot="matsushin-claude-bot[bot]"
 bot_id=$(gh api "/users/${bot}" --jq .id)
 git config user.name "$bot"
 git config user.email "${bot_id}+${bot}@users.noreply.github.com"
+# checkout はトークンを残していないので、ここで App のトークンを使う
+git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
 title=$(head -n 1 "$out/pr-title.txt")
 git switch -c "$branch"

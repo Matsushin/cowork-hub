@@ -368,8 +368,10 @@ gh variable set SENTRY_PROJECTS --body "<Rails用のID>,<Next.js用のID>"
 | deps | 依存ライブラリ（gem・npm）をパッチ・マイナーまで上げ、CI と同じ確認（テスト・RuboCop・Brakeman・bundler-audit・lint・型・ビルド）を通す。壊れたら小さく直すか、そのライブラリだけ見送る。メジャーの更新は PR の本文で知らせるだけ | `maintenance/deps` |
 | docs | この1週間のコミットを見て、README・CLAUDE.md・スキルに書かれたコマンド・パス・バージョンなどがコードと食い違っていないかを確かめ、事実の食い違いだけを直す | `maintenance/docs` |
 
-- **AI にコミット・push の権限を渡しません**。AI はファイルを変えて PR のタイトルと本文を `/tmp/maintenance/` に書くまでで、コミット・push・PR の作成は次のステップ（`.github/scripts/open-maintenance-pr.sh`）が決まったコマンドで行います。main にブランチ保護がないため、AI が直接 main に push できないようにしています
-- docs のジョブが直せるのは README.md・CLAUDE.md・`.claude/skills/` だけです。ほかのファイルが変わっていたら PR を作らずに失敗します
+- **AI にコミット・push の権限を渡しません**（main にブランチ保護がないため）。AI はファイルを変えて PR のタイトルと本文を `/tmp/maintenance/` に書くまでで、コミット・push・PR の作成は次のステップ（`.github/scripts/open-maintenance-pr.sh`）が決まったコマンドで行います
+  - AI のステップにあるのは読み取りだけの `GITHUB_TOKEN` です。checkout はトークンを残さず、push に使う専用 GitHub App のトークンは AI のステップが終わってから発行します
+  - PR を作るスクリプトは、AI が書き換えられないよう AI の前に作業ツリーの外へ写して、それを実行します
+- 変えてよい範囲を決めています（deps は `backend/`・`frontend/` の下で Dockerfile を除く、docs は README.md・CLAUDE.md・`.claude/skills/`）。範囲の外のファイルが変わっていたら PR を作らずに失敗します
 - PR はブランチごとに1本（ラベル `maintenance`）で、毎週上書きします。このブランチに手でコミットを積まないでください。マージは人が行います
 - 変える必要がなければ PR は作りません
 - 試すとき：Actions の「週1回のメンテナンス（AI）」を手動で実行します（`task` で deps・docs のどちらかだけにもできます）
