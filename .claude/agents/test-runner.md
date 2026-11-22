@@ -10,7 +10,7 @@ color: green
 
 ## 何を実行するか
 
-呼び出し元が範囲を指定したらそれに従う。指定がなければ、`git status --short` と `git diff --stat origin/main...HEAD`（`origin/main` がなければ `main...HEAD`） で変わったファイルを見て、関係するものだけを実行する。
+呼び出し元が範囲を指定したらそれに従う。指定がなければ、`git status --short` と `git diff --stat origin/main...HEAD`（`origin/main` がなければ `main...HEAD`）で変わったファイルを見て、関係するものだけを実行する。
 
 | 変わったもの | 実行するコマンド（リポジトリ直下から） |
 |---|---|
