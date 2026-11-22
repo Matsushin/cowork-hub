@@ -21,3 +21,7 @@
 # サイト全体に Basic 認証をかける（外部の人やボットに見せない）。パスワードは自動で作って SSM に置く
 # basic_auth_user     = "ee-office"
 # basic_auth_password = "password1122" # 省略すると自動で作る
+
+# 本番エラーの起票（incident.yml）を AWS から30分ごとに起動する（incident_dispatch.tf）。
+# GitHub の fine-grained personal access token（Matsushin/cowork-hub だけ・Actions: Read and write だけ）。省略すると作らない
+# github_dispatch_token = "github_pat_..."

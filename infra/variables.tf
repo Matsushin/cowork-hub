@@ -142,3 +142,16 @@ variable "basic_auth_password" {
   default     = null
   sensitive   = true
 }
+
+variable "github_repository" {
+  description = "GitHub のリポジトリ（owner/name）。本番エラーの起票のワークフローを起動する先"
+  type        = string
+  default     = "Matsushin/cowork-hub"
+}
+
+variable "github_dispatch_token" {
+  description = "incident.yml を起動するための GitHub の fine-grained personal access token（このリポジトリの Actions: Read and write だけ）。空なら AWS からの起動を作らない（incident_dispatch.tf）"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
