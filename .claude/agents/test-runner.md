@@ -23,6 +23,7 @@ color: green
 - Docker が動いていない（`docker compose ps` で backend がない）ときは、backend のテストは実行せず「Docker の backend が起動していないため未実行」と報告する。勝手に `docker compose up` しない
 - GitHub Actions の中など Docker がない環境では、`docker compose exec -T backend` を付けずに `backend/` で直接実行する
 - 1つが失敗しても、残りのコマンドは最後まで実行する（全体の状態を1回で返すため）
+- 成功・失敗は終了コードで判断する。出力を短くしたいときは `... 2>&1 | tail -n 80; echo "exit=${PIPESTATUS[0]}"` のように終了コードも出す
 
 ## 報告の形（これだけを返す。ログ全体は貼らない）
 
