@@ -88,6 +88,7 @@
 ## Claude Code の設定（`.claude/`）
 - 機能を追加・変更するときは、スキル `add-feature`（`.claude/skills/add-feature/SKILL.md`）の手順に沿って進める
 - 本番のエラー（ラベル `incident` の Issue）を調べる・直すときは、スキル `fix-incident`（`.claude/skills/fix-incident/SKILL.md`）の手順に沿う
+- 変更のセキュリティを確かめるときは、スキル `security-check` のチェックリストを使う（PR ごとに `.github/workflows/claude-security-review.yml` も同じ手順で見る）
 - PostToolUse のフック（`.claude/hooks/format-edited-file.sh`）が、編集したファイルを自動で整形する
   （Ruby は RuboCop、TS/JS などは Prettier → ESLint、Terraform は terraform fmt）。自動で直せない指摘は Claude に返される
 - Prettier の設定は `frontend/.prettierrc.json`（1行130文字）。生成物（`api-schema.ts`）と `components/ui/` は `.prettierignore` で除外。
