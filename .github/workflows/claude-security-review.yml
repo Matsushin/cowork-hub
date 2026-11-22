@@ -48,9 +48,11 @@ jobs:
 
       # チェックリストは PR の中のものではなく main のものを使う（PR がレビューの基準を弱めて、自分自身を通せないように）
       - name: main のチェックリストを取り出す
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           mkdir -p /tmp/security
-          git fetch --depth 1 origin "${{ github.event.pull_request.base.ref }}"
+          git fetch --depth 1 origin "$BASE_REF"
           git show FETCH_HEAD:.claude/skills/security-check/SKILL.md > /tmp/security/checklist.md
 
       - uses: anthropics/claude-code-action@v1
