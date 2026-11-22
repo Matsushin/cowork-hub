@@ -310,6 +310,7 @@ aws cloudwatch set-alarm-state --alarm-name cowork-hub-alb-target-5xx --state-va
 | `claude.yml` | PR・Issueのコメントやレビュー、Issueの作成・アサインで `@claude` と書いたとき | 質問に答えたり、修正してコミットしたりする |
 | `claude.yml` | Issueにラベル `claude-implement` を付けたとき | Issueの仕様に沿って実装し、テストを通してからPRを作る |
 | `pr-screenshots.yml` | 画面に関わるファイルが変わったPRの作成・更新時 | 変更前後の画面のキャプチャ（E2Eを変えたなら操作のGIF）をPRにコメントする |
+| `claude-security-review.yml` | コード・インフラ・ワークフローが変わったPRの作成・更新時 | セキュリティの観点だけでレビューし、【重大】の指摘があればチェックを失敗させる（下の「AI が書いたコードのセキュリティチェック」） |
 | `incident.yml` | 30分ごと（夜間停止中を除く） | 本番の新しいエラーを Sentry から Issue にし、原因と修正案をコメントする（下の「本番エラーを Issue にして AI に調べさせる」） |
 
 - ラベル `claude-implement` を付ける前に、Issue 本文を必ず読んで内容を確認してください（本文の指示にClaudeが従うため）。Issueの作者がオーナー・メンバー・コラボレーター以外のときは動きません
@@ -317,6 +318,19 @@ aws cloudwatch set-alarm-state --alarm-name cowork-hub-alb-target-5xx --state-va
 - 指摘には重要度（【必須】【推奨】【参考】）を付けます
 - `@claude` に反応するのは、オーナー・メンバー・コラボレーターのコメントだけです
 - ドラフトPRとフォークからのPRは自動レビューの対象外です
+
+### AI が書いたコードのセキュリティチェック
+
+AI が書いた PR（`claude-implement`・`@claude`・週1回のメンテナンス）も人の PR も、同じ3段で確かめます。
+
+| 段 | どこで | 見るもの |
+|---|---|---|
+| 静的解析 | `ci.yml` | Brakeman（Rails の危ない書き方）、bundler-audit（gem の既知の脆弱性）、`npm audit --omit=dev --audit-level=high`（本番で使う npm パッケージの high 以上の脆弱性） |
+| AI のセキュリティレビュー | `claude-security-review.yml` | このアプリの守りの仕組み（Pundit の認可、Strong Parameters、Basic 認証と `proxy.ts` の対象外のパス、内部 API キー、Server Actions の検証、リダイレクト先、ワークフローの権限）が崩れていないか。攻撃の筋道を書けるものだけを指摘し、【重大】があればチェックが失敗する |
+| 秘密情報 | GitHub の設定 | secret scanning と push protection（有効） |
+
+- チェックリストはスキル `security-check`（`.claude/skills/security-check/SKILL.md`）にあり、手元の Claude Code でも使えます
+- 通常のレビュー（`claude-review.yml`）とは別のジョブにしています。観点を絞ったほうが見落としが減り、セキュリティの指摘だけでマージを止められるためです
 
 ### セットアップに必要なシークレット・変数
 
