@@ -13,7 +13,7 @@ description: ee-office（cowork-hub）の週1回のメンテナンスを AI が�
 | ドキュメントの見直し | `maintenance/docs` | ファイルを読む、git の履歴を見る、ドキュメントだけ書き換える |
 
 **AI はコミット・push・PR の作成をしない。** 変更をファイルに残し、PR のタイトルと本文を `/tmp/maintenance/` に書くところまで。
-コミット・push・PR はワークフローの次のステップ（決まったコマンド）が行う。main にブランチ保護がないため、AI に push の権限を渡さない。
+変更は patch にして別のジョブに渡し、そちらが main をきれいに checkout し直して patch を当て、変えてよい範囲かを確かめてからコミット・push・PR を行う。main にブランチ保護がないため、AI に push の権限を渡さない。
 
 出力するファイル（両方の作業で共通）
 

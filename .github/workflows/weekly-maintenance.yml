@@ -5,10 +5,10 @@ name: 週1回のメンテナンス（AI）
 #   docs：README・CLAUDE.md・スキルとコードの食い違いを直す（ドキュメントだけ）
 #
 # AI に push の権限を渡さない（main にブランチ保護がないため）
-#   - AI のステップには読み取りだけの GITHUB_TOKEN しかない。checkout もトークンを .git/config に残さない
-#   - push・PR に使う専用 GitHub App のトークンは、AI のステップが終わってから発行する
-#   - コミット・push・PR は open-maintenance-pr.sh が決まったコマンドで行う。AI が書き換えられないよう、AI の前に作業ツリーの外へ写しておく
-#   - 変わったファイルが決まった範囲の外にあれば、PR を作らずに失敗する
+#   - AI のジョブ（deps・docs）にあるのは読み取りだけの GITHUB_TOKEN。変更は patch にして成果物（artifact）で渡すだけ
+#   - PR を作るジョブ（*-pr）は別のランナーで、main をきれいに checkout し直し、patch を当てて、変えてよい範囲かを確かめてから push する。
+#     AI や更新したライブラリのコードが作業ツリーや .git（フック・設定）に何かを仕込んでも、push 用のトークンには届かない
+#   - push・PR に使う専用 GitHub App のトークンは、PR を作るジョブでだけ発行する
 # PR はブランチごとに1本で毎週上書きし、マージは人が行う。
 on:
   schedule:
@@ -33,6 +33,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    outputs:
+      changed: ${{ steps.patch.outputs.changed }}
     services:
       mysql:
         image: mysql:8.4
@@ -50,9 +52,6 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-
-      - name: PR を作るスクリプトを作業ツリーの外へ写す
-        run: cp .github/scripts/open-maintenance-pr.sh "$RUNNER_TEMP/"
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -90,11 +89,40 @@ jobs:
             週1回の依存ライブラリの更新です。.claude/skills/weekly-maintenance/SKILL.md の「A. 依存ライブラリの更新」の手順に沿って進めてください。
             テスト環境は準備済みです（MySQL はサービスコンテナで起動、テスト用DB作成済み、gem と npm パッケージもインストール済み）。
             変えてよいのは backend/ と frontend/ の下だけです（Dockerfile は除く）。
-            結果は手順の通り /tmp/maintenance/pr-title.txt と /tmp/maintenance/pr-body.md に書きます。コミット・push・PR の作成はしません（次のステップが行う）。
+            結果は手順の通り /tmp/maintenance/pr-title.txt と /tmp/maintenance/pr-body.md に書きます。コミット・push・PR の作成はしません（別のジョブが行う）。
             日本語で書きます。
           claude_args: |
             --max-turns 80
             --allowedTools "Read,Glob,Grep,Edit(/backend/**),Edit(/frontend/**),Write(/backend/**),Write(/frontend/**),Write(//tmp/maintenance/**),Bash(cd:*),Bash(bundle outdated:*),Bash(bundle update:*),Bash(bundle install:*),Bash(bundle exec rspec:*),Bash(bin/rubocop:*),Bash(bin/brakeman:*),Bash(bin/bundler-audit:*),Bash(bin/rails:*),Bash(npm outdated:*),Bash(npm update:*),Bash(npm ci:*),Bash(npm audit:*),Bash(npm run:*),Bash(npm test:*),Bash(npx tsc:*),Bash(git status:*),Bash(git diff:*),Bash(git checkout --:*)"
+
+      - name: 変更を patch にする
+        id: patch
+        run: bash .github/scripts/maintenance-patch.sh "$RUNNER_TEMP/maintenance"
+
+      - uses: actions/upload-artifact@v7
+        if: steps.patch.outputs.changed == 'true'
+        with:
+          name: maintenance-deps
+          path: ${{ runner.temp }}/maintenance/
+          retention-days: 7
+
+  deps-pr:
+    needs: deps
+    if: needs.deps.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: maintenance-deps
+          path: ${{ runner.temp }}/maintenance
 
       # push と PR の作成は専用 GitHub App のトークンで行う（GITHUB_TOKEN だと PR に CI と自動レビューが走らない）
       - name: GitHub Appのトークンを発行
@@ -104,11 +132,11 @@ jobs:
           app-id: ${{ vars.CLAUDE_APP_ID }}
           private-key: ${{ secrets.CLAUDE_APP_PRIVATE_KEY }}
 
-      - name: PR を作る（変更があれば）
+      - name: PR を作る
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         # backend/ と frontend/ の下だけ（Dockerfile を除く）
-        run: bash "$RUNNER_TEMP/open-maintenance-pr.sh" maintenance/deps '^(backend|frontend)/' '(^|/)Dockerfile'
+        run: bash .github/scripts/open-maintenance-pr.sh maintenance/deps "$RUNNER_TEMP/maintenance" '^(backend|frontend)/' '(^|/)Dockerfile$'
 
   docs:
     if: github.event_name == 'schedule' || inputs.task != 'deps'
@@ -117,14 +145,13 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    outputs:
+      changed: ${{ steps.patch.outputs.changed }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 100 # この1週間のコミットを見るため
           persist-credentials: false
-
-      - name: PR を作るスクリプトを作業ツリーの外へ写す
-        run: cp .github/scripts/open-maintenance-pr.sh "$RUNNER_TEMP/"
 
       - uses: anthropics/claude-code-action@v1
         with:
@@ -135,11 +162,40 @@ jobs:
 
             週1回のドキュメントの見直しです。.claude/skills/weekly-maintenance/SKILL.md の「B. ドキュメントの見直し」の手順に沿って進めてください。
             直してよいのは README.md・CLAUDE.md・.claude/skills/ の下のファイルだけです。
-            結果は手順の通り /tmp/maintenance/pr-title.txt と /tmp/maintenance/pr-body.md に書きます。コミット・push・PR の作成はしません（次のステップが行う）。
+            結果は手順の通り /tmp/maintenance/pr-title.txt と /tmp/maintenance/pr-body.md に書きます。コミット・push・PR の作成はしません（別のジョブが行う）。
             日本語で書きます。
           claude_args: |
             --max-turns 40
             --allowedTools "Read,Glob,Grep,Edit(/README.md),Edit(/CLAUDE.md),Edit(/.claude/skills/**),Write(//tmp/maintenance/**),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git status:*)"
+
+      - name: 変更を patch にする
+        id: patch
+        run: bash .github/scripts/maintenance-patch.sh "$RUNNER_TEMP/maintenance"
+
+      - uses: actions/upload-artifact@v7
+        if: steps.patch.outputs.changed == 'true'
+        with:
+          name: maintenance-docs
+          path: ${{ runner.temp }}/maintenance/
+          retention-days: 7
+
+  docs-pr:
+    needs: docs
+    if: needs.docs.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: maintenance-docs
+          path: ${{ runner.temp }}/maintenance
 
       - name: GitHub Appのトークンを発行
         id: app-token
@@ -148,8 +204,8 @@ jobs:
           app-id: ${{ vars.CLAUDE_APP_ID }}
           private-key: ${{ secrets.CLAUDE_APP_PRIVATE_KEY }}
 
-      - name: PR を作る（変更があれば）
+      - name: PR を作る
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         # README.md・CLAUDE.md・.claude/skills/ だけ
-        run: bash "$RUNNER_TEMP/open-maintenance-pr.sh" maintenance/docs '^(README\.md|CLAUDE\.md|\.claude/skills/)'
+        run: bash .github/scripts/open-maintenance-pr.sh maintenance/docs "$RUNNER_TEMP/maintenance" '^(README\.md|CLAUDE\.md|\.claude/skills/)'
