@@ -352,6 +352,22 @@ gh api -X PUT repos/Matsushin/cowork-hub/branches/main/protection --input .githu
 ```
 - 通常のレビュー（`claude-review.yml`）とは別のジョブにしています。観点を絞ったほうが見落としが減り、セキュリティの指摘だけでマージを止められるためです
 
+### 役割ごとのサブエージェント（手元の Claude Code）
+
+`.claude/agents/` に、役割を分けたサブエージェントを3つ定義しています。スキル `add-feature` の手順9・10から使います。
+
+| 名前 | モデル | 役割 | できること |
+|---|---|---|---|
+| `test-runner` | haiku | テスト・静的解析を実行し、失敗だけを短く返す（長いログで会話を埋めない） | 実行して読むだけ。直さない |
+| `code-reviewer` | sonnet | 差分を CLAUDE.md の「コードレビューの観点」で読む（実装した本人の会話を持たない別の目） | 読むだけ |
+| `security-reviewer` | opus | 差分をスキル `security-check` に沿って、攻撃者の立場で読む | 読むだけ |
+
+- 2つのレビューは同時に頼みます。直すのは呼び出し元（メインの会話）です
+- `tools` では Bash のコマンドまでは絞れないため、「読むだけ」「直さない」はプロンプトで指示しています
+- わざと2つの問題（他人の予約を `policy_scope` なしで探す・閉店時刻ちょうどを営業中にする）を入れて試しました
+  - test-runner は閉店時刻の問題で落ちる2件のテストを報告、code-reviewer は2つとも指摘、security-reviewer は1つ目を【注意】で指摘し、2つ目はセキュリティの問題ではないと切り分けました
+  - code-reviewer は「境界のテストがない」と誤った指摘もしました（実際はある）。読むだけの役は推測を含むので、テストを動かす test-runner と組み合わせて使います
+
 ### セットアップに必要なシークレット・変数
 
 リポジトリの Settings → Secrets and variables → Actions で登録します。値はリポジトリにコミットしないでください。

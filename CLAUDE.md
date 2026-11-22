@@ -90,6 +90,8 @@
 - 本番のエラー（ラベル `incident` の Issue）を調べる・直すときは、スキル `fix-incident`（`.claude/skills/fix-incident/SKILL.md`）の手順に沿う
 - 依存ライブラリの更新・ドキュメントとコードの食い違いの見直しは、スキル `weekly-maintenance` の手順に沿う（`.github/workflows/weekly-maintenance.yml` が毎週月曜に AI に行わせ、PR にする）
 - 変更のセキュリティを確かめるときは、スキル `security-check` のチェックリストを使う（PR ごとに `.github/workflows/claude-security-review.yml` も同じ手順で見る）
+- サブエージェント（`.claude/agents/`）：テストの実行は `test-runner`（haiku。失敗だけを返す）、PR 前の見直しは `code-reviewer`（sonnet）と `security-reviewer`（opus）に同時に頼む。
+  3つとも読むだけで直さない（直すのは呼び出し元）。tools で Bash のコマンドまでは絞れないので、「読むだけ」はプロンプトで指示している
 - PostToolUse のフック（`.claude/hooks/format-edited-file.sh`）が、編集したファイルを自動で整形する
   （Ruby は RuboCop、TS/JS などは Prettier → ESLint、Terraform は terraform fmt）。自動で直せない指摘は Claude に返される
 - Prettier の設定は `frontend/.prettierrc.json`（1行130文字）。生成物（`api-schema.ts`）と `components/ui/` は `.prettierignore` で除外。
