@@ -311,6 +311,7 @@ aws cloudwatch set-alarm-state --alarm-name cowork-hub-alb-target-5xx --state-va
 | `claude.yml` | Issueにラベル `claude-implement` を付けたとき | Issueの仕様に沿って実装し、テストを通してからPRを作る |
 | `pr-screenshots.yml` | 画面に関わるファイルが変わったPRの作成・更新時 | 変更前後の画面のキャプチャ（E2Eを変えたなら操作のGIF）をPRにコメントする |
 | `incident.yml` | 30分ごと（夜間停止中を除く） | 本番の新しいエラーを Sentry から Issue にし、原因と修正案をコメントする（下の「本番エラーを Issue にして AI に調べさせる」） |
+| `weekly-maintenance.yml` | 毎週月曜 9:00（日本時間） | 依存ライブラリの更新と、ドキュメントとコードの食い違いの修正を AI が行い、変更があれば PR にする（下の「週1回のメンテナンスを AI にやらせる」） |
 
 - ラベル `claude-implement` を付ける前に、Issue 本文を必ず読んで内容を確認してください（本文の指示にClaudeが従うため）。Issueの作者がオーナー・メンバー・コラボレーター以外のときは動きません
 - レビューの観点とプロジェクトの規約は `CLAUDE.md` に書いています
@@ -357,6 +358,21 @@ gh secret set SENTRY_AUTH_TOKEN
 gh variable set SENTRY_ORG --body "<組織のIDかスラッグ>"
 gh variable set SENTRY_PROJECTS --body "<Rails用のID>,<Next.js用のID>"
 ```
+
+### 週1回のメンテナンスを AI にやらせる
+
+`weekly-maintenance.yml` が毎週月曜 9:00（日本時間）に、次の2つを別々のジョブで行います。手順はスキル `weekly-maintenance`（`.claude/skills/weekly-maintenance/SKILL.md`）です。
+
+| ジョブ | 内容 | PR のブランチ |
+|---|---|---|
+| deps | 依存ライブラリ（gem・npm）をパッチ・マイナーまで上げ、CI と同じ確認（テスト・RuboCop・Brakeman・bundler-audit・lint・型・ビルド）を通す。壊れたら小さく直すか、そのライブラリだけ見送る。メジャーの更新は PR の本文で知らせるだけ | `maintenance/deps` |
+| docs | この1週間のコミットを見て、README・CLAUDE.md・スキルに書かれたコマンド・パス・バージョンなどがコードと食い違っていないかを確かめ、事実の食い違いだけを直す | `maintenance/docs` |
+
+- **AI にコミット・push の権限を渡しません**。AI はファイルを変えて PR のタイトルと本文を `/tmp/maintenance/` に書くまでで、コミット・push・PR の作成は次のステップ（`.github/scripts/open-maintenance-pr.sh`）が決まったコマンドで行います。main にブランチ保護がないため、AI が直接 main に push できないようにしています
+- docs のジョブが直せるのは README.md・CLAUDE.md・`.claude/skills/` だけです。ほかのファイルが変わっていたら PR を作らずに失敗します
+- PR はブランチごとに1本（ラベル `maintenance`）で、毎週上書きします。このブランチに手でコミットを積まないでください。マージは人が行います
+- 変える必要がなければ PR は作りません
+- 試すとき：Actions の「週1回のメンテナンス（AI）」を手動で実行します（`task` で deps・docs のどちらかだけにもできます）
 
 ## 学習用として割り切っている点
 
