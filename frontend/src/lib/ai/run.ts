@@ -73,6 +73,7 @@ export async function runAiFeature({
   let usage = emptyUsage();
   let toolCalls = 0;
   let final: Anthropic.Beta.Messages.BetaMessage | undefined;
+  let cost = 0;
   let outcome: { status: "succeeded" | "refused" | "failed"; error_code?: string } = {
     status: "failed",
     error_code: "unexpected",
@@ -117,6 +118,7 @@ export async function runAiFeature({
     // 断られて別のモデルが答えたときは、そのモデル名を記録する（料金は表にあるモデルの料金で計算する）
     const servedModel = final?.model ?? AI_MODEL;
     const priceModel: AiModel = servedModel in PRICES_PER_MTOK ? (servedModel as AiModel) : AI_MODEL;
+    cost = costMicroUsd(priceModel, usage);
     try {
       await apiFetch(`/ai_requests/${record.id}`, {
         method: "PATCH",
@@ -125,7 +127,7 @@ export async function runAiFeature({
             ...outcome,
             model: servedModel,
             ...usage,
-            cost_micro_usd: costMicroUsd(priceModel, usage),
+            cost_micro_usd: cost,
             duration_ms: durationMs,
             tool_calls: toolCalls,
           },
@@ -143,7 +145,7 @@ export async function runAiFeature({
     message: final!,
     remainingToday: record.remaining_today,
     usage,
-    costMicroUsd: costMicroUsd(AI_MODEL, usage),
+    costMicroUsd: cost,
     durationMs: Date.now() - startedAt,
     toolCalls,
   };
