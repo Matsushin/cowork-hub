@@ -4,6 +4,7 @@ import { requiresLogin } from "./login-required";
 describe("requiresLogin", () => {
   it("会員・管理者のページはログインが必要", () => {
     for (const path of [
+      "/assistant",
       "/visits",
       "/visits/1",
       "/reservations",

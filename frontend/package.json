@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "eval:booking": "vitest run --config vitest.eval.config.ts evals/booking"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.13.0",

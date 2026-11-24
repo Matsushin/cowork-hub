@@ -10,6 +10,7 @@ export function Header({ user, currentVisit }: { user: User | null; currentVisit
     { href: "/locations", label: "拠点を探す" },
     ...(user
       ? [
+          { href: "/assistant", label: "AIで探す" },
           { href: "/visits", label: "利用状況" },
           { href: "/reservations", label: "予約一覧" },
           { href: "/billing", label: "請求" },

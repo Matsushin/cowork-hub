@@ -27,6 +27,12 @@ export type RunAiOptions = {
   messages: Anthropic.Beta.Messages.BetaMessageParam[];
   /** API を呼ぶ回数の上限（道具を使うたびに1回）。超えたら失敗として終える */
   maxIterations?: number;
+  /** 最後の回答の形（JSON Schema）。指定すると、最後の回答はこの形の JSON になる */
+  format?: Anthropic.Beta.Messages.BetaJSONOutputFormat;
+  /** 考える深さ。既定は low（会話の応答なので）。評価データで確かめて調整する */
+  effort?: "low" | "medium" | "high";
+  /** Rails API を呼ぶ関数。既定はログイン中の会員の Cookie を使う apiFetch（評価では評価用の会員のトークンを使うものに差し替える） */
+  api?: typeof apiFetch;
 };
 
 export type AiRunResult = {
@@ -58,12 +64,15 @@ export async function runAiFeature({
   context,
   messages,
   maxIterations = 8,
+  format,
+  effort = "low",
+  api = apiFetch,
 }: RunAiOptions): Promise<AiRunResult> {
   const sdk = anthropic();
 
   let record: AiRequest;
   try {
-    record = await apiFetch<AiRequest>("/ai_requests", { method: "POST", body: { ai_request: { feature } } });
+    record = await api<AiRequest>("/ai_requests", { method: "POST", body: { ai_request: { feature } } });
   } catch (e) {
     if (e instanceof ApiError && e.status === 429) throw new AiLimitError(e.message);
     throw e;
@@ -86,8 +95,7 @@ export async function runAiFeature({
       max_iterations: maxIterations,
       // 相談は短いので、毎回の履歴をこちらから送る（会話を Anthropic 側に預ける thread は使わない）
       thread: false,
-      // 会話の応答なので考える深さは低めでよい（評価データで確かめて調整する）
-      output_config: { effort: "low" },
+      output_config: { effort, ...(format ? { format } : {}) },
       // 安全のための判定で断られたとき、Anthropic 側で別のモデルに切り替えて答えさせる
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
@@ -95,7 +103,7 @@ export async function runAiFeature({
         { type: "text", text: system, cache_control: { type: "ephemeral" } },
         ...(context ? [{ type: "text" as const, text: context }] : []),
       ],
-      tools: toolsFor(feature),
+      tools: toolsFor(feature, api),
       messages,
     });
     for await (const message of runner) {
@@ -120,7 +128,7 @@ export async function runAiFeature({
     const priceModel: AiModel = servedModel in PRICES_PER_MTOK ? (servedModel as AiModel) : AI_MODEL;
     cost = costMicroUsd(priceModel, usage);
     try {
-      await apiFetch(`/ai_requests/${record.id}`, {
+      await api(`/ai_requests/${record.id}`, {
         method: "PATCH",
         body: {
           ai_request: {

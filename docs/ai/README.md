@@ -5,7 +5,7 @@
 
 | 順番 | 機能 | 使う人 | 状態 |
 |---|---|---|---|
-| 1 | 話して予約できるアシスタント | 会員 | 設計中 |
+| 1 | 話して予約できるアシスタント（`/assistant`） | 会員 | 作成済み。評価 20/20・1件 約2円・応答 中央値 6.5秒（[結果](../../frontend/evals/booking/RESULTS.md)） |
 | 2 | 売上・利用状況を質問できる分析アシスタント | 運営者（管理者） | 未着手 |
 | 3 | 利用ルールに答える FAQ ボット（RAG） | 会員 | 未着手 |
 
@@ -14,6 +14,33 @@
 - [01_課題メモ.md](01_課題メモ.md)：だれが何に困っているか、成功の基準（作る前に書く）
 - [02_AIに渡す操作.md](02_AIに渡す操作.md)：AI が呼んでよい API の許可リストと、その理由
 - 評価データ：[`frontend/evals/booking/cases.json`](../../frontend/evals/booking/cases.json)（予約アシスタント）
+- 評価の結果：[`frontend/evals/booking/RESULTS.md`](../../frontend/evals/booking/RESULTS.md)（流すたびに1行）
+
+## 予約アシスタントの仕組み
+
+```
+会員の文章 ─▶ Server Action（入力を Zod で検証）
+  ─▶ runBookingAssistant
+       ├ runAiFeature：回数の上限 → Claude（道具：拠点の検索・詳細・空き状況・料金プラン）→ 利用量の記録
+       ├ 最後の回答は構造化出力（kind・message・候補の ID と時刻だけ）
+       └ 候補を API の値で確かめる（営業時間・30分単位・空き・過去でない）。名前と料金も API の値で付ける
+  ─▶ 画面：候補のカード →「この内容で予約」→ 確認ダイアログ → 既存の予約の処理（POST /api/reservations）
+```
+
+- AI は候補の ID と時刻しか返さない。拠点名・料金などは API の値から付けるので、AI が料金を間違えても画面には出ない
+- 確かめて外れた候補は画面に出さず、評価の「外した候補」として数える（今は0件）
+
+## 評価の流し方
+
+手元で Rails を起動し（`docker compose up -d`、seed 済み）、`frontend/.env.local` に `ANTHROPIC_API_KEY` を書いてから：
+
+```bash
+cd frontend && npm run eval:booking
+```
+
+- 実行ごとに評価用の会員を作り、20件を順に流す（1回 約40円・約2分）。結果は `evals/booking/results/`（コミットしない）と `RESULTS.md`
+- `EVAL_ONLY=ケースのid` で1件だけ、`EVAL_EFFORT=medium` で考える深さを変えて比べられる
+- 評価の期待を変えたときは、なぜ変えたか（仕様の判断）を `RESULTS.md` のメモに残す
 
 ## 共通の約束
 
