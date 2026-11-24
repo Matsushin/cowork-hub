@@ -155,3 +155,11 @@ variable "github_dispatch_token" {
   default     = ""
   sensitive   = true
 }
+
+
+variable "anthropic_api_key" {
+  description = "Claude API のキー（AI 機能。docs/ai/）。Anthropic の Console で作る。空なら AI 機能を使わない"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

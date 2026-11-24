@@ -58,3 +58,12 @@ resource "aws_ssm_parameter" "internal_api_key" {
   type  = "SecureString"
   value = random_password.internal_api_key.result
 }
+
+# Claude API のキー（AI 機能。docs/ai/）。Anthropic の Console で作り、terraform.tfvars の anthropic_api_key に書く
+# 未設定ならパラメーターを作らず、frontend にも渡さない（AI 機能は「今使えません」と表示して通常の画面へ案内する）
+resource "aws_ssm_parameter" "anthropic_api_key" {
+  count = var.anthropic_api_key == "" ? 0 : 1
+  name  = "/${var.project}/frontend/ANTHROPIC_API_KEY"
+  type  = "SecureString"
+  value = var.anthropic_api_key
+}
