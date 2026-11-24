@@ -21,6 +21,7 @@ Rails.application.routes.draw do
     resources :reservations, only: %i[index create] do
       patch :cancel, on: :member
     end
+    resources :ai_requests, only: %i[create update]
 
     namespace :admin do
       resources :users, only: %i[index show update]

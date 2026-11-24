@@ -63,6 +63,8 @@
 - 非同期処理は Active Job ＋ Solid Queue（キューはアプリと同じDB。ワーカーはPumaの中で動く：`config/puma.rb`）。
   メールは `deliver_later` で送る。開発環境は Docker なら Mailpit（SMTP。http://localhost:8025 で確認）、ホストで直接動かすときは letter_opener（ブラウザで開く）、テストは `have_enqueued_mail` で確認する。
   本番は `SMTP_ADDRESS` などの環境変数を渡すまで送信しない
+- AI 機能（`docs/ai/`）：Claude の呼び出しは Next.js のサーバーが行い、Rails は利用記録（`AiRequest`）と会員ごとの1日の回数の上限（`AI_DAILY_LIMIT`、既定20回）を持つ。
+  相談の前に `POST /api/ai_requests`（上限なら429）、後に `PATCH /api/ai_requests/:id` でトークン数・料金・応答時間を書く。入力の文章や AI の回答は保存しない
 - 秘密情報はコミットしない（本番はSSM / Secrets Manager経由）
 
 ## 画面のキャプチャ（PR）

@@ -10,7 +10,27 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_15_000004) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_000001) do
+  create_table "ai_requests", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "feature", null: false
+    t.integer "status", default: 0, null: false
+    t.string "model"
+    t.integer "input_tokens", default: 0, null: false
+    t.integer "output_tokens", default: 0, null: false
+    t.integer "cache_read_input_tokens", default: 0, null: false
+    t.integer "cache_creation_input_tokens", default: 0, null: false
+    t.integer "cost_micro_usd", default: 0, null: false
+    t.integer "duration_ms"
+    t.integer "tool_calls", default: 0, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feature", "created_at"], name: "index_ai_requests_on_feature_and_created_at"
+    t.index ["user_id", "created_at"], name: "index_ai_requests_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_ai_requests_on_user_id"
+  end
+
   create_table "locations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "prefecture", null: false
@@ -262,6 +282,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_15_000004) do
     t.check_constraint "(`checked_out_at` is null) or (`checked_in_at` <= `checked_out_at`)", name: "visits_time_order"
   end
 
+  add_foreign_key "ai_requests", "users"
   add_foreign_key "memberships", "plans"
   add_foreign_key "memberships", "users"
   add_foreign_key "reservations", "spaces"

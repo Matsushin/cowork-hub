@@ -126,6 +126,18 @@ RSpec.configure do |config|
             },
             required: %w[id name kind capacity hourly_price active location_id]
           },
+          AiRequest: {
+            type: :object,
+            description: "AI 機能の利用記録（1回の相談）。入力の文章や AI の回答は含まない",
+            properties: {
+              id: { type: :integer },
+              feature: { type: :string, enum: %w[booking] },
+              status: { type: :string, enum: %w[started succeeded failed refused] },
+              created_at: datetime,
+              remaining_today: { type: :integer, description: "今日あと何回使えるか" }
+            },
+            required: %w[id feature status created_at remaining_today]
+          },
           Reservation: {
             type: :object,
             properties: {

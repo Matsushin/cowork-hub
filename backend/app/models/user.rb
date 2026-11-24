@@ -4,6 +4,7 @@ class User < ApplicationRecord
   has_many :memberships, dependent: :destroy
   has_many :reservations, dependent: :destroy
   has_many :visits, dependent: :destroy
+  has_many :ai_requests, dependent: :destroy
 
   enum :role, { member: 0, admin: 1 }, validate: true
 
