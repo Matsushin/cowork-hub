@@ -53,4 +53,9 @@ FactoryBot.define do
     starts_at { 1.day.from_now.change(hour: 10) }
     ends_at { 1.day.from_now.change(hour: 12) }
   end
+
+  factory :ai_request do
+    user
+    feature { "booking" }
+  end
 end

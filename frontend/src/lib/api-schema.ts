@@ -595,6 +595,155 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ai_requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** AI の相談を始める（1日の回数の上限を確かめて記録を作る） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ai_request: {
+                            /** @enum {string} */
+                            feature: "booking";
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 記録を作った */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AiRequest"];
+                    };
+                };
+                /** @description 未ログイン */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description 今日の回数の上限に達した */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ai_requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 終わった相談のトークン数・料金・応答時間を書く */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ai_request: {
+                            /** @enum {string} */
+                            status: "succeeded" | "failed" | "refused";
+                            model?: string;
+                            input_tokens?: number;
+                            output_tokens?: number;
+                            cache_read_input_tokens?: number;
+                            cache_creation_input_tokens?: number;
+                            /** @description 料金（米ドル）×1,000,000 */
+                            cost_micro_usd?: number;
+                            duration_ms?: number;
+                            tool_calls?: number;
+                            error_code?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 書いた */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AiRequest"];
+                    };
+                };
+                /** @description 未ログイン */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description 他人の記録 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description すでに終わっている */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/signup": {
         parameters: {
             query?: never;
@@ -1496,6 +1645,18 @@ export interface components {
                 id: number;
                 name: string;
             };
+        };
+        /** @description AI 機能の利用記録（1回の相談）。入力の文章や AI の回答は含まない */
+        AiRequest: {
+            id: number;
+            /** @enum {string} */
+            feature: "booking";
+            /** @enum {string} */
+            status: "started" | "succeeded" | "failed" | "refused";
+            /** Format: date-time */
+            created_at: string;
+            /** @description 今日あと何回使えるか */
+            remaining_today: number;
         };
         Reservation: {
             id: number;

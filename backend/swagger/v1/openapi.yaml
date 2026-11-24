@@ -206,6 +206,35 @@ components:
       - hourly_price
       - active
       - location_id
+    AiRequest:
+      type: object
+      description: AI 機能の利用記録（1回の相談）。入力の文章や AI の回答は含まない
+      properties:
+        id:
+          type: integer
+        feature:
+          type: string
+          enum:
+          - booking
+        status:
+          type: string
+          enum:
+          - started
+          - succeeded
+          - failed
+          - refused
+        created_at:
+          type: string
+          format: date-time
+        remaining_today:
+          type: integer
+          description: 今日あと何回使えるか
+      required:
+      - id
+      - feature
+      - status
+      - created_at
+      - remaining_today
     Reservation:
       type: object
       properties:
@@ -830,6 +859,123 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Error"
+  "/api/ai_requests":
+    post:
+      summary: AI の相談を始める（1日の回数の上限を確かめて記録を作る）
+      tags:
+      - AI
+      parameters: []
+      responses:
+        '201':
+          description: 記録を作った
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AiRequest"
+        '429':
+          description: 今日の回数の上限に達した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ai_request:
+                  type: object
+                  properties:
+                    feature:
+                      type: string
+                      enum:
+                      - booking
+                  required:
+                  - feature
+              required:
+              - ai_request
+  "/api/ai_requests/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    patch:
+      summary: 終わった相談のトークン数・料金・応答時間を書く
+      tags:
+      - AI
+      parameters: []
+      responses:
+        '200':
+          description: 書いた
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AiRequest"
+        '404':
+          description: 他人の記録
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '422':
+          description: すでに終わっている
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: 未ログイン
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ai_request:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum:
+                      - succeeded
+                      - failed
+                      - refused
+                    model:
+                      type: string
+                    input_tokens:
+                      type: integer
+                    output_tokens:
+                      type: integer
+                    cache_read_input_tokens:
+                      type: integer
+                    cache_creation_input_tokens:
+                      type: integer
+                    cost_micro_usd:
+                      type: integer
+                      description: 料金（米ドル）×1,000,000
+                    duration_ms:
+                      type: integer
+                    tool_calls:
+                      type: integer
+                    error_code:
+                      type: string
+                  required:
+                  - status
+              required:
+              - ai_request
   "/api/signup":
     post:
       summary: 会員登録（ドロップインプランで開始）
