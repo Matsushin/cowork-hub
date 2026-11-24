@@ -56,11 +56,11 @@ jobs:
       - run: npm ci
       # 本番で使うパッケージの既知の脆弱性（high 以上で失敗。開発用ツールと moderate 以下は対象外）
       - run: npm audit --omit=dev --audit-level=high
-      # OpenAPIから生成した型が最新か（backend の仕様書を変えたら npm run gen:api が必要）
+      # OpenAPIから生成した型と AI の道具の定義が最新か（backend の仕様書や AI の許可リストを変えたら npm run gen:api が必要）
       - name: APIの型が最新か確認
         run: |
           npm run gen:api
-          git diff --exit-code src/lib/api-schema.ts || (echo "::error::npm run gen:api を実行してコミットしてください" && exit 1)
+          git diff --exit-code src/lib/api-schema.ts src/lib/ai/generated-tools.ts || (echo "::error::npm run gen:api を実行してコミットしてください" && exit 1)
       - run: npm run lint
       - run: npm run format:check
       - run: npx tsc --noEmit

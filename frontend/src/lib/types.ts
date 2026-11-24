@@ -18,3 +18,4 @@ export type Visit = Schemas["Visit"];
 export type Bill = Schemas["Bill"];
 export type Sales = Schemas["Sales"];
 export type CheckinCode = Schemas["CheckinCode"];
+export type AiRequest = Schemas["AiRequest"];

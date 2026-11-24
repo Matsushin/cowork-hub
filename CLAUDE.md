@@ -30,7 +30,7 @@
   スキーマ（`components.schemas`）は `spec/swagger_helper.rb` に書く。APIを追加・変更したら
   1. `spec/integration` にテストを追加し、必要ならスキーマを直す
   2. `cd backend && bin/rails rswag:specs:swaggerize` で仕様書を再生成
-  3. `cd frontend && npm run gen:api` で型（`src/lib/api-schema.ts`）を再生成。フロントは `lib/types.ts` の別名を使う
+  3. `cd frontend && npm run gen:api` で型（`src/lib/api-schema.ts`）と、AI に渡す道具（`src/lib/ai/generated-tools.ts`）を再生成。フロントは `lib/types.ts` の別名を使う
   CIで、生成物がコミットされているかを確認している
 - フロントのデータ取得は Server Components（`lib/server/api.ts` の `apiFetch`）、更新は Server Actions（`app/actions/`）で行う。
   ブラウザからRails APIを直接呼ばない。クライアントコンポーネントは操作が必要な部分だけにする
@@ -65,6 +65,9 @@
   本番は `SMTP_ADDRESS` などの環境変数を渡すまで送信しない
 - AI 機能（`docs/ai/`）：Claude の呼び出しは Next.js のサーバーが行い、Rails は利用記録（`AiRequest`）と会員ごとの1日の回数の上限（`AI_DAILY_LIMIT`、既定20回）を持つ。
   相談の前に `POST /api/ai_requests`（上限なら429）、後に `PATCH /api/ai_requests/:id` でトークン数・料金・応答時間を書く。入力の文章や AI の回答は保存しない
+  - Next.js 側の入り口は `lib/ai/run.ts` の `runAiFeature`（記録・回数の上限・Claude の呼び出し・usage の記録をまとめて行う）。モデルは `claude-opus-5-5`
+  - AI の道具は `lib/ai/allowlist.json`（許可リスト）から `scripts/gen-ai-tools.mjs` が仕様書をもとに作る。GET だけ。足すときは `docs/ai/02_AIに渡す操作.md` に理由を書く
+  - 道具は会員本人のトークンで `apiFetch` を呼ぶ（見てよい範囲は Pundit が決める）。引数は `tool-request.ts` で型と形を確かめてからパスに埋める
 - 秘密情報はコミットしない（本番はSSM / Secrets Manager経由）
 
 ## 画面のキャプチャ（PR）

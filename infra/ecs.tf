@@ -42,13 +42,13 @@ data "aws_iam_policy_document" "execution_secrets" {
   }
   statement {
     actions = ["ssm:GetParameters"]
-    resources = [
+    resources = concat([
       aws_ssm_parameter.secret_key_base.arn,
       aws_ssm_parameter.admin_password.arn,
       aws_ssm_parameter.demo_password.arn,
       aws_ssm_parameter.basic_auth_password.arn,
       aws_ssm_parameter.internal_api_key.arn,
-    ]
+    ], aws_ssm_parameter.anthropic_api_key[*].arn)
   }
 }
 
@@ -183,6 +183,9 @@ resource "aws_ecs_task_definition" "frontend" {
       { name = "INTERNAL_API_KEY", valueFrom = aws_ssm_parameter.internal_api_key.arn },
       ], var.basic_auth_user == null ? [] : [
       { name = "BASIC_AUTH_PASSWORD", valueFrom = aws_ssm_parameter.basic_auth_password.arn },
+      ], [
+      # Claude API のキー（AI 機能）。未設定なら渡さない
+      for p in aws_ssm_parameter.anthropic_api_key : { name = "ANTHROPIC_API_KEY", valueFrom = p.arn }
     ])
     logConfiguration = {
       logDriver = "awslogs"

@@ -25,3 +25,6 @@
 # 本番エラーの起票（incident.yml）を AWS から30分ごとに起動する（incident_dispatch.tf）。
 # GitHub の fine-grained personal access token（Matsushin/cowork-hub だけ・Actions: Read and write だけ）。省略すると作らない
 # github_dispatch_token = "github_pat_..."
+
+# Claude API のキー（AI 機能）。Anthropic の Console で作り、月の上限額も Console で設定する。省略すると AI 機能を使わない
+# anthropic_api_key = "sk-ant-..."
