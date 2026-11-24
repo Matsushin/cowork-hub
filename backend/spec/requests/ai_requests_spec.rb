@@ -73,6 +73,12 @@ RSpec.describe "AI 機能の利用記録", type: :request do
       expect(ai_request.reload.status).to eq "succeeded"
     end
 
+    it "started のままにはできない（何度でも書き直せないように）" do
+      finish(status: "started", input_tokens: 10)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(ai_request.reload).to have_attributes(status: "started", input_tokens: 0)
+    end
+
     it "他人の記録は404（存在を知られないため）" do
       finish(id: create(:ai_request).id, status: "succeeded")
       expect(response).to have_http_status(:not_found)

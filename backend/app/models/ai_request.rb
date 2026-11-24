@@ -37,12 +37,20 @@ class AiRequest < ApplicationRecord
     end
   end
 
-  # 終わった相談の記録を書く。書けるのは始めたばかり（started）の記録だけ
+  # 終わった相談の記録を書く。書けるのは始めたばかり（started）の記録だけで、終わった状態にする
+  # 同じ記録への書き込みが同時に来ても二重に書かないよう、行をロックしてから確かめる
   def finish!(attrs)
-    unless started?
-      errors.add(:base, "この記録はすでに終わっています")
-      raise ActiveRecord::RecordInvalid, self
+    with_lock do
+      unless started?
+        errors.add(:base, "この記録はすでに終わっています")
+        raise ActiveRecord::RecordInvalid, self
+      end
+      assign_attributes(attrs)
+      if started?
+        errors.add(:status, "は終わった状態（succeeded・failed・refused）にしてください")
+        raise ActiveRecord::RecordInvalid, self
+      end
+      save!
     end
-    update!(attrs)
   end
 end
