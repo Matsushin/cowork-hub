@@ -1,7 +1,7 @@
 // このファイルは scripts/gen-ai-tools.mjs が作る。手で直さない（npm run gen:api で作り直す）
 import type { GeneratedTool } from "./tool-request";
 
-export const GENERATED_TOOLS: Record<"booking" | "analytics", GeneratedTool[]> = {
+export const GENERATED_TOOLS: Record<"booking" | "analytics" | "faq", GeneratedTool[]> = {
   "booking": [
     {
       "name": "search_locations",
@@ -208,6 +208,69 @@ export const GENERATED_TOOLS: Record<"booking" | "analytics", GeneratedTool[]> =
             "type": "string"
           }
         },
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "faq": [
+    {
+      "name": "search_locations",
+      "description": "拠点を探す。q は拠点名・住所の部分一致、prefecture は都道府県名。拠点の営業時間や料金を聞かれたとき、拠点の ID を知るために使う\n（GET /api/locations：拠点の検索）",
+      "method": "GET",
+      "path": "/api/locations",
+      "pathParams": [],
+      "queryParams": [
+        "q",
+        "prefecture"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "拠点名・住所の部分一致"
+          },
+          "prefecture": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_location",
+      "description": "拠点の詳細を見る。営業時間（open_hour〜close_hour、日本時間の時）、ドロップインの料金（hourly_price は1時間あたりの料金、daily_max_price は1回の上限）、スペース（会議室の定員 capacity・1時間の料金 hourly_price）が分かる\n（GET /api/locations/{id}：拠点の詳細）",
+      "method": "GET",
+      "path": "/api/locations/{id}",
+      "pathParams": [
+        "id"
+      ],
+      "queryParams": [],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_plans",
+      "description": "料金プランの一覧。月額料金（price）と、会議室の月の予約上限（monthly_hours_limit、時間。null は無制限）が分かる\n（GET /api/plans：料金プラン一覧）",
+      "method": "GET",
+      "path": "/api/plans",
+      "pathParams": [],
+      "queryParams": [],
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
         "required": [],
         "additionalProperties": false
       }

@@ -1,5 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import type { BetaRunnableTool } from "@anthropic-ai/sdk/lib/tools/BetaRunnableTool";
 import { ApiError } from "@/lib/api-error";
 import { apiFetch } from "@/lib/server/api";
 import type { AiRequest } from "@/lib/types";
@@ -31,6 +32,8 @@ export type RunAiOptions = {
   format?: Anthropic.Beta.Messages.BetaJSONOutputFormat;
   /** 考える深さ。既定は low（会話の応答なので）。評価データで確かめて調整する */
   effort?: "low" | "medium" | "high";
+  /** 許可リストから作る道具のほかに持たせる道具（ご利用ルールの検索など、Rails を呼ばないもの） */
+  extraTools?: BetaRunnableTool[];
   /** Rails API を呼ぶ関数。既定はログイン中の会員の Cookie を使う apiFetch（評価では評価用の会員のトークンを使うものに差し替える） */
   api?: typeof apiFetch;
 };
@@ -66,6 +69,7 @@ export async function runAiFeature({
   maxIterations = 8,
   format,
   effort = "low",
+  extraTools = [],
   api = apiFetch,
 }: RunAiOptions): Promise<AiRunResult> {
   const sdk = anthropic();
@@ -103,7 +107,7 @@ export async function runAiFeature({
         { type: "text", text: system, cache_control: { type: "ephemeral" } },
         ...(context ? [{ type: "text" as const, text: context }] : []),
       ],
-      tools: toolsFor(feature, api),
+      tools: [...toolsFor(feature, api), ...extraTools],
       messages,
     });
     for await (const message of runner) {

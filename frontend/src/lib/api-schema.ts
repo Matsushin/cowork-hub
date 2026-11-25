@@ -731,7 +731,7 @@ export interface paths {
                              * @description analytics は管理者だけ
                              * @enum {string}
                              */
-                            feature: "booking" | "analytics";
+                            feature: "booking" | "analytics" | "faq";
                         };
                     };
                 };
