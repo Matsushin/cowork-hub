@@ -7,15 +7,17 @@
 |---|---|---|---|
 | 1 | 話して予約できるアシスタント（`/assistant`） | 会員 | 作成済み。評価 20/20・1件 約2円・応答 中央値 6.5秒（[結果](../../frontend/evals/booking/RESULTS.md)） |
 | 2 | 売上・利用状況を質問できる分析アシスタント（`/admin/assistant`） | 運営者（管理者） | 作成済み。評価 16/16・確かめられない数字 0・1件 約1.8円・応答 中央値 4.9秒（[結果](../../frontend/evals/analytics/RESULTS.md)） |
-| 3 | 利用ルールに答える FAQ ボット（RAG） | 会員 | 未着手 |
+| 3 | ご利用ルールに引用つきで答える FAQ ボット（RAG、`/rules`） | 会員 | 作成済み。評価 16/16・引用 9/9・1件 約1.5円・応答 中央値 4.0秒（[結果](../../frontend/evals/faq/RESULTS.md)） |
 
 ## 文書
 
 - [01_課題メモ.md](01_課題メモ.md)：予約アシスタントの課題メモ（だれが何に困っているか、成功の基準。作る前に書く）
 - [03_課題メモ_分析アシスタント.md](03_課題メモ_分析アシスタント.md)：分析アシスタントの課題メモ
+- [04_課題メモ_FAQボット.md](04_課題メモ_FAQボット.md)：FAQ ボットの課題メモ（検索の方式・引用の設計の判断も）
+- [../rules/](../rules/README.md)：ご利用ルール（FAQ ボットの元の文書）
 - [02_AIに渡す操作.md](02_AIに渡す操作.md)：AI が呼んでよい API の許可リストと、その理由
-- 評価データ：[`frontend/evals/booking/cases.json`](../../frontend/evals/booking/cases.json)（予約）、[`frontend/evals/analytics/cases.json`](../../frontend/evals/analytics/cases.json)（分析）
-- 評価の結果：[`booking/RESULTS.md`](../../frontend/evals/booking/RESULTS.md)・[`analytics/RESULTS.md`](../../frontend/evals/analytics/RESULTS.md)（流すたびに1行）
+- 評価データ：[`frontend/evals/booking/cases.json`](../../frontend/evals/booking/cases.json)（予約）、[`analytics/cases.json`](../../frontend/evals/analytics/cases.json)（分析）、[`faq/cases.json`](../../frontend/evals/faq/cases.json)（FAQ）
+- 評価の結果：[`booking/RESULTS.md`](../../frontend/evals/booking/RESULTS.md)・[`analytics/RESULTS.md`](../../frontend/evals/analytics/RESULTS.md)・[`faq/RESULTS.md`](../../frontend/evals/faq/RESULTS.md)（流すたびに1行）
 
 ## 予約アシスタントの仕組み
 
@@ -47,6 +49,22 @@
 - **個人の情報を渡さない**：道具は人数・件数・金額だけを返す。会員一覧・予約一覧（会員の情報を含む）の API は渡さない
 - 開発環境の seed に、過去3か月の利用のデモデータが入る（乱数の種を固定。本番には入れない）
 
+## FAQ ボットの仕組み
+
+```
+会員の質問 ─▶ Server Action（ログイン・入力の長さを確かめる）
+  ─▶ runFaqAssistant
+       ├ runAiFeature：回数の上限 → Claude（道具：ご利用ルールの検索・拠点の検索と詳細・料金プラン）→ 利用量の記録
+       ├ search_rules：docs/rules を文字の2-gram の BM25 で探し、上位3項目を search_result ブロック（引用あり）で返す
+       └ 答えの text ブロックの引用（citations）を、ご利用ルールの項目に結ぶ（ルールにない出典は捨てる）
+  ─▶ 画面：答えの文 ＋ 根拠の番号 [1] ＋ 根拠の一覧（/rules#項目 へのリンク）
+```
+
+- **引用の場所は API が返す**：AI が出典を書くのではなく、Claude の citations が「どの検索結果のどの文か」を返す。AI が出典を作れない
+- **変わる値は API から**：営業時間・料金・プランの上限は文書に書かない（`docs/rules/README.md`）。値の質問は拠点・プランの API で調べる
+- **検索だけの評価を CI で流す**：`search.test.ts` の18件（質問 → 根拠の項目が上位3件に入るか）。Claude を呼ばないので料金なし
+- 構造化出力は使わない（citations と同時には使えない）
+
 ## 評価の流し方
 
 手元で Rails を起動し（`docker compose up -d`、seed 済み）、`frontend/.env.local` に `ANTHROPIC_API_KEY` を書いてから：
@@ -57,6 +75,7 @@ cd frontend && npm run eval:booking
 
 - 実行ごとに評価用の会員を作り、20件を順に流す（1回 約40円・約2分）。結果は `evals/booking/results/`（コミットしない）と `RESULTS.md`
 - 分析アシスタントは `npm run eval:analytics`（16件・1回 約30円・約1分半）。実行した日を「今日」として、seed のデモデータに対して流す。正解は同じ集計の API を評価から直接呼んで求める
+- FAQ ボットは `npm run eval:faq`（16件・1回 約25円・約1分）
 - `EVAL_ONLY=ケースのid` で1件だけ、`EVAL_EFFORT=medium` で考える深さを変えて比べられる
 - 評価の期待を変えたときは、なぜ変えたか（仕様の判断）を `RESULTS.md` のメモに残す
 

@@ -106,10 +106,12 @@ export function toSegments(content: Anthropic.Beta.Messages.BetaContentBlock[]):
       if (!ids.includes(chunk.id)) ids.push(chunk.id);
       sources.set(chunk.id, { id: chunk.id, title: `${chunk.docTitle}：${chunk.heading}`, href: ruleHref(chunk.id) });
     }
+    // 画面は文をそのまま出すので、Markdown の太字（**）は外す（評価で、答えに付けることがあると分かった）
+    const text = block.text.replaceAll("**", "");
     const last = segments.at(-1);
     // 引用のない短い区切り（改行など）は前の部分につなげる
-    if (last && ids.length === 0 && last.sourceIds.length === 0) last.text += block.text;
-    else segments.push({ text: block.text, sourceIds: ids });
+    if (last && ids.length === 0 && last.sourceIds.length === 0) last.text += text;
+    else segments.push({ text, sourceIds: ids });
   }
   return { segments, sources: [...sources.values()] };
 }

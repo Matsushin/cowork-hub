@@ -55,6 +55,13 @@ describe("toSegments", () => {
   });
 });
 
+describe("toSegments（太字）", () => {
+  it("Markdown の太字（**）を外す", () => {
+    const { segments } = toSegments([text("営業時間は**7時〜23時**です。", [cite("/rules#check-in-hours")])] as never);
+    expect(segments[0].text).toBe("営業時間は7時〜23時です。");
+  });
+});
+
 describe("runFaqAssistant", () => {
   it("ご利用ルールの検索を持たせて呼び、引用があれば根拠ありとする", async () => {
     runAiFeature.mockResolvedValue({
