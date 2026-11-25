@@ -1,0 +1,1 @@
+checkin-受付用QRのURLを会員が開いてチェックインし、チェックアウトする-chromium
