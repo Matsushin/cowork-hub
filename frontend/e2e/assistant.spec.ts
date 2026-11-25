@@ -54,3 +54,27 @@ test("一般会員は分析アシスタントを開けない", async ({ page }) 
   await login(page);
   await expect(page).toHaveURL("/locations");
 });
+
+// ご利用ルールと FAQ ボット。Claude は呼ばない（中身の確かめは npm run eval:faq）
+test("ご利用ルールはログインしなくても読め、FAQ ボットはログインを案内する", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "ご利用ルール" }).first().click();
+  await expect(page).toHaveURL("/rules");
+  await expect(page.getByRole("heading", { name: "取り消しの料金" })).toBeVisible();
+  await expect(page.getByText("すると、ご利用ルールについて AI に質問できます")).toBeVisible();
+
+  // 項目へのリンク（FAQ ボットの引用のリンク先）で、その項目へ移動できる
+  await page.goto("/rules#cancel-fee");
+  await expect(page.locator("#cancel-fee")).toBeInViewport();
+});
+
+test("ログインした会員は、ご利用ルールの画面で FAQ ボットに質問できる（使えないときは案内が出る）", async ({ page }) => {
+  await page.goto("/login?next=/rules");
+  await login(page);
+  await expect(page).toHaveURL("/rules");
+  const unavailable = page.getByText("FAQ ボットは今使えません");
+  if (!(await unavailable.isVisible())) {
+    await expect(page.getByLabel("質問")).toBeVisible();
+    await expect(page.getByRole("button", { name: "質問する" })).toBeDisabled();
+  }
+});

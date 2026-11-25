@@ -1,6 +1,7 @@
-# 生成物（npm run gen:api）と shadcn/ui が生成したコンポーネントは整形しない
+# 生成物（npm run gen:api・gen:rules）と shadcn/ui が生成したコンポーネントは整形しない
 src/lib/api-schema.ts
 src/lib/ai/generated-tools.ts
+src/lib/ai/faq/generated-rules.ts
 src/components/ui/
 .next/
 node_modules/

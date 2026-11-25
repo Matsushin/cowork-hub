@@ -12,6 +12,7 @@ export const PAGES = [
   { name: "reserve", dir: "locations/[id]/reserve", path: "/locations/1/reserve", role: "member" },
   { name: "checkin", dir: "checkin", path: "/checkin?location=1", role: "member" },
   { name: "assistant", dir: "assistant", path: "/assistant", role: "member" },
+  { name: "rules", dir: "rules", path: "/rules", role: "guest" },
   { name: "reservations", dir: "reservations", path: "/reservations", role: "member" },
   { name: "visits", dir: "visits", path: "/visits", role: "member" },
   { name: "billing", dir: "billing", path: "/billing", role: "member" },

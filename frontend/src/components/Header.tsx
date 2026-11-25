@@ -18,6 +18,7 @@ export function Header({ user, currentVisit }: { user: User | null; currentVisit
           ...(user.role === "admin" ? [{ href: "/admin/users", label: "管理" }] : []),
         ]
       : []),
+    { href: "/rules", label: "ご利用ルール" },
   ];
 
   return (

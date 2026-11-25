@@ -1168,6 +1168,7 @@ paths:
                       enum:
                       - booking
                       - analytics
+                      - faq
                       description: analytics は管理者だけ
                   required:
                   - feature
