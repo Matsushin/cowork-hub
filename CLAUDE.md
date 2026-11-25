@@ -68,6 +68,8 @@
   - Next.js 側の入り口は `lib/ai/run.ts` の `runAiFeature`（記録・回数の上限・Claude の呼び出し・usage の記録をまとめて行う）。モデルは `claude-opus-5-5`
   - AI の道具は `lib/ai/allowlist.json`（許可リスト）から `scripts/gen-ai-tools.mjs` が仕様書をもとに作る。GET だけ。足すときは `docs/ai/02_AIに渡す操作.md` に理由を書く
   - 道具は会員本人のトークンで `apiFetch` を呼ぶ（見てよい範囲は Pundit が決める）。引数は `tool-request.ts` で型と形を確かめてからパスに埋める
+  - 予約アシスタント（`/assistant`、`lib/ai/booking/`）：AI は候補の ID と時刻だけを構造化出力で返し、`check.ts` が API の値で確かめてから画面に出す。確定は人が既存の `createReservation` で行う
+  - AI への指示（`booking/prompt.ts`）や道具を変えたら、`cd frontend && npm run eval:booking` で評価を流し、`evals/booking/RESULTS.md` に結果とメモを残す（実際の Claude を呼ぶので料金がかかる。流す前にユーザーに確認する）
 - 秘密情報はコミットしない（本番はSSM / Secrets Manager経由）
 
 ## 画面のキャプチャ（PR）
