@@ -9,4 +9,5 @@ playwright-report/
 test-results/
 test-results-screenshots/
 test-results-video/
+test-results-demo/
 screenshots-out/

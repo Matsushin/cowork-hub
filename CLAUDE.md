@@ -72,6 +72,7 @@
   - 分析アシスタント（`/admin/assistant`、`lib/ai/analytics/`、管理者だけ）：道具は集計の API（`Admin::StatsController`・`UsageStats`・`MemberStats`）と月次売上だけ。AI に SQL・計算をさせない。答えの数字は `verify.ts` が道具の結果と照らし合わせて印を付ける。利用記録の `analytics` は `AiRequestPolicy` で管理者だけ
   - FAQ ボット（`/rules`、`lib/ai/faq/`）：ご利用ルール（`docs/rules/*.md`）を `search.ts`（2-gram の BM25）で検索し、search_result ブロックで渡して Claude の引用（citations）を付けさせる。構造化出力は使わない（citations と同時に使えない）。ルールの文書を変えたら `npm run gen:rules`（CI で確かめる）。変わる値（営業時間・料金）は文書に書かない
   - AI への指示（`*/prompt.ts`）や道具を変えたら、`cd frontend && npm run eval:booking`（予約）・`npm run eval:analytics`（分析）・`npm run eval:faq`（FAQ）で評価を流し、`evals/*/RESULTS.md` に結果とメモを残す（実際の Claude を呼ぶので料金がかかる。流す前にユーザーに確認する）。分析の評価は開発環境の seed のデモデータ（過去3か月）を使う
+  - 画面を変えたら、デモの録画（`docs/ai/demo/`）も `cd frontend && npm run demo:record` で録り直す（実際の Claude を呼ぶので、流す前にユーザーに確認する）
 - 秘密情報はコミットしない（本番はSSM / Secrets Manager経由）
 
 ## 画面のキャプチャ（PR）
