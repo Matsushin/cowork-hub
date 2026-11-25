@@ -1920,7 +1920,7 @@ export interface components {
             month: string;
             /** @description 月末（今月なら今日）時点でプランを契約している人数 */
             member_count: number;
-            /** @description その月に登録した人数 */
+            /** @description その月に登録した人数（管理者を含む。プランを契約していない人も数える） */
             new_member_count: number;
             /** @description その月に会議室を予約したか、ドロップインを使った人数 */
             active_member_count: number;
