@@ -34,7 +34,7 @@ class UsageStats
       group_by: @group_by,
       location: @location&.slice(:id, :name),
       rows:,
-      totals: totals(rows)
+      totals:
     }
   end
 
@@ -103,11 +103,13 @@ class UsageStats
     sorted.map { |row| finish_row(row) }
   end
 
+  # 行と合計を同じデータから作るため、予約と利用は1回だけ読む
   def reservations
-    Reservation.confirmed.where(starts_at: range).joins(:space).where(spaces: { location_id: location_ids }).includes(:space)
+    @reservations ||= Reservation.confirmed.where(starts_at: range).joins(:space)
+                                 .where(spaces: { location_id: location_ids }).includes(:space).to_a
   end
 
-  def visits = Visit.finished.where(checked_in_at: range, location_id: location_ids)
+  def visits = @visits ||= Visit.finished.where(checked_in_at: range, location_id: location_ids).to_a
 
   # 会議室を予約できた時間（営業時間 × 会議室の数 × 日数）を行ごとに足す
   def add_open_hours(rows)
@@ -146,9 +148,9 @@ class UsageStats
   end
 
   # 合計は丸める前の値から計算する（行の丸めた値を足すとずれるため）
-  def totals(_rows)
-    rs = reservations.to_a
-    vs = @group_by == "space" ? nil : visits.to_a
+  def totals
+    rs = reservations
+    vs = @group_by == "space" ? nil : visits
     open = meeting_rooms.sum { |r| r.location.close_hour - r.location.open_hour } * ((@to - @from).to_i + 1)
     used = rs.select { |r| r.space.meeting_room? }.sum(&:duration_hours)
     reservation_amount = rs.sum(&:amount)

@@ -267,7 +267,7 @@ RSpec.configure do |config|
             properties: {
               month: { type: :string, example: "2026-11" },
               member_count: { type: :integer, description: "月末（今月なら今日）時点でプランを契約している人数" },
-              new_member_count: { type: :integer, description: "その月に登録した人数" },
+              new_member_count: { type: :integer, description: "その月に登録した人数（管理者を含む。プランを契約していない人も数える）" },
               active_member_count: { type: :integer, description: "その月に会議室を予約したか、ドロップインを使った人数" },
               by_plan: {
                 type: :array,
