@@ -10,12 +10,19 @@ describe("AI に渡す道具", () => {
     expect(all.every((t) => t.method === "GET")).toBe(true);
   });
 
-  it("管理 API・会員情報・予約の操作は渡さない", () => {
-    const paths = all.map((t) => t.path);
+  it("会員向け（予約）には、管理 API・会員情報・予約の操作を渡さない", () => {
+    const paths = GENERATED_TOOLS.booking.map((t) => t.path);
     expect(paths.some((p) => p.startsWith("/api/admin"))).toBe(false);
     expect(paths).not.toContain("/api/me");
     expect(paths).not.toContain("/api/reservations");
     expect(paths).not.toContain("/api/session");
+  });
+
+  it("管理者向け（分析）には、集計した数字だけを返す操作を渡す（個人の情報を返す管理 API は渡さない）", () => {
+    const paths = GENERATED_TOOLS.analytics.map((t) => t.path);
+    const admin = paths.filter((p) => p.startsWith("/api/admin"));
+    expect(admin.sort()).toEqual(["/api/admin/sales", "/api/admin/stats/members", "/api/admin/stats/usage"]);
+    expect(paths).not.toContain("/api/me");
   });
 
   it("許可リストと生成された定義が一致する（npm run gen:api の実行漏れがない）", () => {

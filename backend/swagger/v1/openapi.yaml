@@ -435,6 +435,186 @@ components:
       - locations
       - plan_amount
       - total
+    UsageStats:
+      type: object
+      description: 利用状況の集計。金額は円（税込）、時間は時間（小数1桁）、稼働率は％（会議室の予約時間 ÷ 予約できた時間、小数1桁）
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        group_by:
+          type: string
+          enum:
+          - location
+          - space
+          - month
+          - weekday
+          - hour
+        location:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+          required:
+          - id
+          - name
+          nullable: true
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                oneOf:
+                - type: integer
+                - type: string
+                description: 拠点・スペースの ID、月（YYYY-MM）、曜日（0=日曜）、時（0〜23）
+              label:
+                type: string
+                example: 渋谷
+              reservation_count:
+                type: integer
+                description: 会議室などの予約の件数（確定のもの）
+              reservation_hours:
+                type: number
+                description: 予約の時間の合計
+              reservation_amount:
+                type: integer
+                description: 予約の金額の合計（円）
+              visit_count:
+                type: integer
+                nullable: true
+                description: ドロップインの利用の件数
+              visit_hours:
+                type: number
+                nullable: true
+                description: ドロップインの利用時間の合計
+              visit_amount:
+                type: integer
+                nullable: true
+                description: ドロップインの金額の合計（円）
+              total_amount:
+                type: integer
+                description: 予約とドロップインの金額の合計（円）。月額プランの料金は含まない
+              utilization_rate:
+                type: number
+                nullable: true
+                description: 会議室の稼働率（％）。時間帯ごとのときと、会議室がないときは null
+            required:
+            - key
+            - label
+            - reservation_count
+            - reservation_hours
+            - reservation_amount
+            - visit_count
+            - visit_hours
+            - visit_amount
+            - total_amount
+            - utilization_rate
+        totals:
+          type: object
+          properties:
+            reservation_count:
+              type: integer
+              description: 会議室などの予約の件数（確定のもの）
+            reservation_hours:
+              type: number
+              description: 予約の時間の合計
+            reservation_amount:
+              type: integer
+              description: 予約の金額の合計（円）
+            visit_count:
+              type: integer
+              nullable: true
+              description: ドロップインの利用の件数
+            visit_hours:
+              type: number
+              nullable: true
+              description: ドロップインの利用時間の合計
+            visit_amount:
+              type: integer
+              nullable: true
+              description: ドロップインの金額の合計（円）
+            total_amount:
+              type: integer
+              description: 予約とドロップインの金額の合計（円）。月額プランの料金は含まない
+            utilization_rate:
+              type: number
+              nullable: true
+              description: 会議室の稼働率（％）。時間帯ごとのときと、会議室がないときは null
+          required:
+          - reservation_count
+          - reservation_hours
+          - reservation_amount
+          - visit_count
+          - visit_hours
+          - visit_amount
+          - total_amount
+          - utilization_rate
+      required:
+      - from
+      - to
+      - group_by
+      - location
+      - rows
+      - totals
+    MemberStats:
+      type: object
+      description: 会員数の集計（人数だけ。個人の情報は含まない）
+      properties:
+        month:
+          type: string
+          example: 2026-11
+        member_count:
+          type: integer
+          description: 月末（今月なら今日）時点でプランを契約している人数
+        new_member_count:
+          type: integer
+          description: その月に登録した人数（管理者を含む。プランを契約していない人も数える）
+        active_member_count:
+          type: integer
+          description: その月に会議室を予約したか、ドロップインを使った人数
+        by_plan:
+          type: array
+          items:
+            type: object
+            properties:
+              plan:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  kind:
+                    type: string
+                  price:
+                    type: integer
+                required:
+                - id
+                - name
+                - kind
+                - price
+              member_count:
+                type: integer
+              plan_amount:
+                type: integer
+                description: 月額プランの料金の合計（ドロップインは0）
+            required:
+            - plan
+            - member_count
+            - plan_amount
+      required:
+      - month
+      - member_count
+      - new_member_count
+      - active_member_count
+      - by_plan
     CheckinCode:
       type: object
       description: 受付のQRコードに入れるチェックイン用のコード。今と1つ前の時間枠のコードが有効
@@ -859,6 +1039,90 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Error"
+  "/api/admin/stats/usage":
+    get:
+      summary: 利用状況の集計（予約・ドロップインの件数・時間・金額と、会議室の稼働率）
+      tags:
+      - 管理
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: 期間の始め（日本時間の日付 YYYY-MM-DD、この日を含む）
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: 期間の終わり（日本時間の日付 YYYY-MM-DD、この日を含む）。期間は366日以内
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - location
+          - space
+          - month
+          - weekday
+          - hour
+          default: location
+        description: まとめ方。location=拠点、space=スペース（ドロップインは数えない）、month=月、weekday=曜日、hour=時間帯（予約は開始、ドロップインはチェックインの時刻。稼働率は出さない）
+      - name: location_id
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: 拠点で絞り込む
+      responses:
+        '200':
+          description: 集計の結果
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/UsageStats"
+        '400':
+          description: 日付・まとめ方・期間が正しくない
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '403':
+          description: 管理者以外
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/admin/stats/members":
+    get:
+      summary: 会員数の集計（プランごとの人数・新しい会員・利用した会員。個人の情報は返さない）
+      tags:
+      - 管理
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: "^\\d{4}-\\d{2}$"
+        description: 対象の月（YYYY-MM）。省略すると今月
+      responses:
+        '200':
+          description: 集計の結果
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MemberStats"
+        '403':
+          description: 管理者以外
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
   "/api/ai_requests":
     post:
       summary: AI の相談を始める（1日の回数の上限を確かめて記録を作る）
@@ -874,6 +1138,12 @@ paths:
                 "$ref": "#/components/schemas/AiRequest"
         '429':
           description: 今日の回数の上限に達した
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '403':
+          description: 管理者だけの機能（analytics）を一般会員が始めようとした
           content:
             application/json:
               schema:
@@ -897,6 +1167,8 @@ paths:
                       type: string
                       enum:
                       - booking
+                      - analytics
+                      description: analytics は管理者だけ
                   required:
                   - feature
               required:

@@ -19,6 +19,7 @@ export const PAGES = [
   { name: "admin-locations", dir: "admin/locations", path: "/admin/locations", role: "admin" },
   { name: "admin-qr", dir: "admin/locations/[id]/qr", path: "/admin/locations/1/qr", role: "admin" },
   { name: "admin-reservations", dir: "admin/reservations", path: "/admin/reservations", role: "admin" },
+  { name: "admin-assistant", dir: "admin/assistant", path: "/admin/assistant", role: "admin" },
   { name: "admin-sales", dir: "admin/sales", path: "/admin/sales", role: "admin" },
   { name: "admin-spaces", dir: "admin/spaces", path: "/admin/spaces", role: "admin" },
   { name: "admin-users", dir: "admin/users", path: "/admin/users", role: "admin" },

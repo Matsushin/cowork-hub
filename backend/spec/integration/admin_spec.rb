@@ -310,4 +310,55 @@ RSpec.describe "管理", type: :request do
       it_requires_admin
     end
   end
+
+  path "/api/admin/stats/usage" do
+    get "利用状況の集計（予約・ドロップインの件数・時間・金額と、会議室の稼働率）" do
+      tags "管理"
+      produces "application/json"
+      parameter name: :from, in: :query, required: true, schema: { type: :string, format: :date },
+                description: "期間の始め（日本時間の日付 YYYY-MM-DD、この日を含む）"
+      parameter name: :to, in: :query, required: true, schema: { type: :string, format: :date },
+                description: "期間の終わり（日本時間の日付 YYYY-MM-DD、この日を含む）。期間は366日以内"
+      parameter name: :group_by, in: :query, required: false, schema: { type: :string, enum: UsageStats::GROUPS, default: "location" },
+                description: "まとめ方。location=拠点、space=スペース（ドロップインは数えない）、month=月、weekday=曜日、hour=時間帯（予約は開始、ドロップインはチェックインの時刻。稼働率は出さない）"
+      parameter name: :location_id, in: :query, required: false, schema: { type: :integer }, description: "拠点で絞り込む"
+      let(:from) { "2026-11-01" }
+      let(:to) { "2026-11-30" }
+
+      response "200", "集計の結果" do
+        schema "$ref" => "#/components/schemas/UsageStats"
+        before do
+          create(:visit, location:, checked_in_at: 1.day.ago.change(hour: 10), checked_out_at: 1.day.ago.change(hour: 11), amount: 300)
+        end
+        let(:from) { 7.days.ago.to_date.iso8601 }
+        let(:to) { Date.current.iso8601 }
+        run_test!
+      end
+
+      response "400", "日付・まとめ方・期間が正しくない" do
+        schema "$ref" => "#/components/schemas/Error"
+        let(:from) { "2026/11/01" }
+        run_test!
+      end
+
+      it_requires_admin
+    end
+  end
+
+  path "/api/admin/stats/members" do
+    get "会員数の集計（プランごとの人数・新しい会員・利用した会員。個人の情報は返さない）" do
+      tags "管理"
+      produces "application/json"
+      parameter name: :month, in: :query, required: false, schema: { type: :string, pattern: '^\d{4}-\d{2}$' },
+                description: "対象の月（YYYY-MM）。省略すると今月"
+
+      response "200", "集計の結果" do
+        schema "$ref" => "#/components/schemas/MemberStats"
+        let(:month) { Date.current.strftime("%Y-%m") }
+        run_test!
+      end
+
+      it_requires_admin
+    end
+  end
 end

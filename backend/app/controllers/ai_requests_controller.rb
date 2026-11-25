@@ -3,7 +3,9 @@
 #   2. PATCH /api/ai_requests/:id 終わった相談のトークン数・料金・応答時間を書く
 class AiRequestsController < ApplicationController
   def create
-    ai_request = AiRequest.start!(user: current_user, feature: params.expect(ai_request: [ :feature ])[:feature])
+    feature = params.expect(ai_request: [ :feature ])[:feature]
+    authorize AiRequest.new(user: current_user, feature:), :create?
+    ai_request = AiRequest.start!(user: current_user, feature:)
     render json: AiRequestSerializer.call(ai_request), status: :created
   rescue AiRequest::LimitExceeded => e
     render json: { error: e.message }, status: :too_many_requests

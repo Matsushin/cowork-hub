@@ -25,5 +25,31 @@
       "name": "list_plans",
       "description": "料金プランの一覧。プランごとの会議室の月の予約上限（monthly_hours_limit、時間。null は無制限）が分かる。上限について聞かれたときだけ使う"
     }
+  ],
+  "analytics": [
+    {
+      "method": "GET",
+      "path": "/api/admin/stats/usage",
+      "name": "get_usage_stats",
+      "description": "利用状況を集計する。期間（from〜to、日本時間の日付、両端を含む）の会議室などの予約とドロップイン利用の件数・時間・金額、会議室の稼働率（％）を、group_by（location=拠点、space=スペース、month=月、weekday=曜日、hour=時間帯）でまとめて返す。location_id で拠点を絞れる。rows が行ごと、totals が期間全体の合計。月額プランの料金は含まない（月の売上の合計は get_sales）"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/stats/members",
+      "name": "get_member_stats",
+      "description": "月（YYYY-MM）の会員数を集計する。member_count は月末（今月なら今日）時点でプランを契約している人数、new_member_count はその月に登録した人数、active_member_count はその月に予約かドロップインをした人数、by_plan はプランごとの人数と月額プランの料金の合計"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/sales",
+      "name": "get_sales",
+      "description": "月（YYYY-MM）の売上を拠点別に返す。拠点ごとのドロップイン・予約の売上と、月額プランの料金（plan_amount、拠点に紐づかない）、それらを足した月の売上の合計（total）。「売上」と聞かれたら、月額プランを含むこちらの total を使う"
+    },
+    {
+      "method": "GET",
+      "path": "/api/locations",
+      "name": "search_locations",
+      "description": "拠点を探す。q は拠点名・住所の部分一致、prefecture は都道府県名。拠点で絞り込むときに、拠点の ID を知るために使う"
+    }
   ]
 }

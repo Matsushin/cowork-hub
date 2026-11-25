@@ -40,6 +40,15 @@ RSpec.describe "AI 機能の利用記録", type: :request do
       expect(response).to have_http_status(:created)
     end
 
+    it "分析アシスタント（analytics）は管理者だけが始められる" do
+      start(feature: "analytics")
+      expect(response).to have_http_status(:forbidden)
+      expect(json["error"]).to include "管理者だけ"
+
+      post "/api/ai_requests", params: { ai_request: { feature: "analytics" } }, headers: auth_headers(create(:user, :admin)), as: :json
+      expect(response).to have_http_status(:created)
+    end
+
     it "決まっていない機能は422" do
       start(feature: "unknown")
       expect(response).to have_http_status(:unprocessable_content)
