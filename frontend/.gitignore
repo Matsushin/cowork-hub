@@ -47,6 +47,7 @@ next-env.d.ts
 /test-results/
 /test-results-screenshots/
 /test-results-video/
+/test-results-demo/
 /screenshots-out/
 /playwright-report/
 /blob-report/

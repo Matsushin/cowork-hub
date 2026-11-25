@@ -16,7 +16,8 @@
     "format:check": "prettier --check .",
     "eval:booking": "vitest run --config vitest.eval.config.ts evals/booking",
     "eval:analytics": "vitest run --config vitest.eval.config.ts evals/analytics",
-    "eval:faq": "vitest run --config vitest.eval.config.ts evals/faq"
+    "eval:faq": "vitest run --config vitest.eval.config.ts evals/faq",
+    "demo:record": "bash demo/record.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.13.0",
