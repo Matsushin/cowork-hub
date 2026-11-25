@@ -6,7 +6,7 @@
 class AiRequest < ApplicationRecord
   class LimitExceeded < StandardError; end
 
-  FEATURES = %w[booking].freeze
+  FEATURES = %w[booking analytics].freeze
 
   belongs_to :user
 

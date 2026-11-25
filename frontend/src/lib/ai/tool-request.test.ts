@@ -20,6 +20,14 @@ describe("buildRequestPath", () => {
     expect(() => buildRequestPath(t, { location_id: 1, date: "明日" })).toThrow(ToolInputError);
   });
 
+  it("月の形（pattern）とまとめ方（enum）を確かめる", () => {
+    const sales = GENERATED_TOOLS.analytics.find((t) => t.name === "get_sales")!;
+    expect(buildRequestPath(sales, { month: "2026-10" })).toBe("/admin/sales?month=2026-10");
+    expect(() => buildRequestPath(sales, { month: "先月" })).toThrow(ToolInputError);
+    const usage = GENERATED_TOOLS.analytics.find((t) => t.name === "get_usage_stats")!;
+    expect(() => buildRequestPath(usage, { from: "2026-10-01", to: "2026-10-31", group_by: "user" })).toThrow(ToolInputError);
+  });
+
   it("id に整数以外を入れてパスを書き換えられない", () => {
     const t = tool("get_location");
     for (const id of ["1/../../admin/users", "../me", -1, 1.5, "abc"]) {

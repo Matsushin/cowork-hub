@@ -90,3 +90,62 @@ if member_password
     end
   end
 end
+
+# 分析アシスタント（docs/ai/）の確認・評価用に、過去3か月分の利用のデータを入れる（開発環境だけ。本番には入れない）
+# 乱数の種を決めているので、作り直しても同じ数字になる。デモ会員（demo1〜30@example.com）がいなければ作る
+if Rails.env.development? && !User.exists?(email_address: "demo1@example.com")
+  rng = Random.new(42)
+  plans = Plan.order(:id).to_a
+  start_date = (Date.current << 3).beginning_of_month
+  end_date = Date.current - 1
+  members = (1..30).map do |n|
+    joined = start_date + rng.rand(0..((end_date - start_date).to_i - 7))
+    user = User.create!(email_address: "demo#{n}@example.com", name: "デモ会員#{n}", password: "password123",
+                        created_at: joined.in_time_zone.change(hour: 12))
+    user.memberships.create!(plan: plans[n % plans.size], started_on: joined)
+    user
+  end
+  # 拠点ごとの混み具合（渋谷・梅田が多く、博多は少ない）と、曜日（平日が多い）・時間帯（午後が多い）の傾向をつける
+  popularity = { "渋谷" => 1.0, "梅田" => 0.8, "川西駅前" => 0.45, "博多" => 0.3 }
+  weekday_factor = [ 0.3, 1.0, 1.0, 1.1, 1.0, 0.9, 0.4 ]
+  reservations = []
+  visits = []
+  now = Time.current
+  (start_date..end_date).each do |date|
+    Location.where(name: popularity.keys).includes(:spaces).find_each do |location|
+      factor = popularity.fetch(location.name) * weekday_factor[date.wday]
+      location.spaces.select(&:meeting_room?).each do |room|
+        hour = location.open_hour
+        while hour < location.close_hour - 1
+          afternoon = hour >= 13 && hour < 18 ? 1.6 : 1.0
+          if rng.rand < 0.12 * factor * afternoon
+            length = [ 1, 1, 2, 2, 3 ].sample(random: rng)
+            length = [ length, location.close_hour - hour ].min
+            user = members.select { |m| m.created_at.to_date <= date }.sample(random: rng)
+            if user
+              starts_at = date.in_time_zone.change(hour:)
+              reservations << { user_id: user.id, space_id: room.id, starts_at:, ends_at: starts_at + length.hours,
+                                amount: room.hourly_price * length, status: rng.rand < 0.08 ? 1 : 0, created_at: now, updated_at: now }
+            end
+            hour += length
+          else
+            hour += 1
+          end
+        end
+      end
+      (rng.rand(0..(8 * factor).round)).times do
+        user = members.select { |m| m.created_at.to_date <= date }.sample(random: rng)
+        next unless user
+        checked_in_at = date.in_time_zone.change(hour: rng.rand(location.open_hour..(location.close_hour - 2)), min: [ 0, 30 ].sample(random: rng))
+        minutes = [ 60, 90, 120, 180, 240, 300 ].sample(random: rng)
+        checked_out_at = [ checked_in_at + minutes.minutes, location.closes_at(date) ].min
+        plan = user.memberships.first.plan
+        amount = plan.monthly? ? 0 : location.drop_in_fee(((checked_out_at - checked_in_at) / 60).round)
+        visits << { user_id: user.id, location_id: location.id, checked_in_at:, checked_out_at:, amount:, created_at: now, updated_at: now }
+      end
+    end
+  end
+  Reservation.insert_all!(reservations)
+  Visit.insert_all!(visits)
+  puts "分析用のデモデータ：会員 #{members.size}人・予約 #{reservations.size}件・ドロップイン #{visits.size}件"
+end

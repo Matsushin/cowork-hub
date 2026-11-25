@@ -15,6 +15,17 @@ RSpec.configure do |config|
   nullable = ->(schema) { schema.key?("$ref") ? { allOf: [ schema ], nullable: true } : schema.merge(nullable: true) }
   ref = ->(name) { { "$ref" => "#/components/schemas/#{name}" } }
   datetime = { type: :string, format: "date-time" }
+  # 利用状況の集計の数字（行と合計で共通）。スペースごとのときはドロップインの値が null
+  usage_metrics = {
+    reservation_count: { type: :integer, description: "会議室などの予約の件数（確定のもの）" },
+    reservation_hours: { type: :number, description: "予約の時間の合計" },
+    reservation_amount: { type: :integer, description: "予約の金額の合計（円）" },
+    visit_count: { type: :integer, nullable: true, description: "ドロップインの利用の件数" },
+    visit_hours: { type: :number, nullable: true, description: "ドロップインの利用時間の合計" },
+    visit_amount: { type: :integer, nullable: true, description: "ドロップインの金額の合計（円）" },
+    total_amount: { type: :integer, description: "予約とドロップインの金額の合計（円）。月額プランの料金は含まない" },
+    utilization_rate: { type: :number, nullable: true, description: "会議室の稼働率（％）。時間帯ごとのときと、会議室がないときは null" }
+  }
   id_name = { type: :object, properties: { id: { type: :integer }, name: { type: :string } }, required: %w[id name] }
 
   config.openapi_specs = {
@@ -226,6 +237,56 @@ RSpec.configure do |config|
               total: { type: :integer }
             },
             required: %w[month locations plan_amount total]
+          },
+          UsageStats: {
+            type: :object,
+            description: "利用状況の集計。金額は円（税込）、時間は時間（小数1桁）、稼働率は％（会議室の予約時間 ÷ 予約できた時間、小数1桁）",
+            properties: {
+              from: { type: :string, format: :date },
+              to: { type: :string, format: :date },
+              group_by: { type: :string, enum: UsageStats::GROUPS },
+              location: id_name.merge(nullable: true),
+              rows: {
+                type: :array,
+                items: {
+                  type: :object,
+                  properties: {
+                    key: { oneOf: [ { type: :integer }, { type: :string } ], description: "拠点・スペースの ID、月（YYYY-MM）、曜日（0=日曜）、時（0〜23）" },
+                    label: { type: :string, example: "渋谷" }
+                  }.merge(usage_metrics),
+                  required: %w[key label] + usage_metrics.keys.map(&:to_s)
+                }
+              },
+              totals: { type: :object, properties: usage_metrics, required: usage_metrics.keys.map(&:to_s) }
+            },
+            required: %w[from to group_by location rows totals]
+          },
+          MemberStats: {
+            type: :object,
+            description: "会員数の集計（人数だけ。個人の情報は含まない）",
+            properties: {
+              month: { type: :string, example: "2026-11" },
+              member_count: { type: :integer, description: "月末（今月なら今日）時点でプランを契約している人数" },
+              new_member_count: { type: :integer, description: "その月に登録した人数" },
+              active_member_count: { type: :integer, description: "その月に会議室を予約したか、ドロップインを使った人数" },
+              by_plan: {
+                type: :array,
+                items: {
+                  type: :object,
+                  properties: {
+                    plan: {
+                      type: :object,
+                      properties: { id: { type: :integer }, name: { type: :string }, kind: { type: :string }, price: { type: :integer } },
+                      required: %w[id name kind price]
+                    },
+                    member_count: { type: :integer },
+                    plan_amount: { type: :integer, description: "月額プランの料金の合計（ドロップインは0）" }
+                  },
+                  required: %w[plan member_count plan_amount]
+                }
+              }
+            },
+            required: %w[month member_count new_member_count active_member_count by_plan]
           },
           CheckinCode: {
             type: :object,

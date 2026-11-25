@@ -595,6 +595,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/stats/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 利用状況の集計（予約・ドロップインの件数・時間・金額と、会議室の稼働率） */
+        get: {
+            parameters: {
+                query: {
+                    /** @description 期間の始め（日本時間の日付 YYYY-MM-DD、この日を含む） */
+                    from: string;
+                    /** @description 期間の終わり（日本時間の日付 YYYY-MM-DD、この日を含む）。期間は366日以内 */
+                    to: string;
+                    /** @description まとめ方。location=拠点、space=スペース（ドロップインは数えない）、month=月、weekday=曜日、hour=時間帯（予約は開始、ドロップインはチェックインの時刻。稼働率は出さない） */
+                    group_by?: "location" | "space" | "month" | "weekday" | "hour";
+                    /** @description 拠点で絞り込む */
+                    location_id?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 集計の結果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UsageStats"];
+                    };
+                };
+                /** @description 日付・まとめ方・期間が正しくない */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description 管理者以外 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/stats/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 会員数の集計（プランごとの人数・新しい会員・利用した会員。個人の情報は返さない） */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description 対象の月（YYYY-MM）。省略すると今月 */
+                    month?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 集計の結果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MemberStats"];
+                    };
+                };
+                /** @description 管理者以外 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ai_requests": {
         parameters: {
             query?: never;
@@ -616,8 +727,11 @@ export interface paths {
                 content: {
                     "application/json": {
                         ai_request: {
-                            /** @enum {string} */
-                            feature: "booking";
+                            /**
+                             * @description analytics は管理者だけ
+                             * @enum {string}
+                             */
+                            feature: "booking" | "analytics";
                         };
                     };
                 };
@@ -634,6 +748,15 @@ export interface paths {
                 };
                 /** @description 未ログイン */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description 管理者だけの機能（analytics）を一般会員が始めようとした */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1737,6 +1860,81 @@ export interface components {
             }[];
             plan_amount: number;
             total: number;
+        };
+        /** @description 利用状況の集計。金額は円（税込）、時間は時間（小数1桁）、稼働率は％（会議室の予約時間 ÷ 予約できた時間、小数1桁） */
+        UsageStats: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @enum {string} */
+            group_by: "location" | "space" | "month" | "weekday" | "hour";
+            location: {
+                id: number;
+                name: string;
+            } | null;
+            rows: {
+                /** @description 拠点・スペースの ID、月（YYYY-MM）、曜日（0=日曜）、時（0〜23） */
+                key: number | string;
+                /** @example 渋谷 */
+                label: string;
+                /** @description 会議室などの予約の件数（確定のもの） */
+                reservation_count: number;
+                /** @description 予約の時間の合計 */
+                reservation_hours: number;
+                /** @description 予約の金額の合計（円） */
+                reservation_amount: number;
+                /** @description ドロップインの利用の件数 */
+                visit_count: number | null;
+                /** @description ドロップインの利用時間の合計 */
+                visit_hours: number | null;
+                /** @description ドロップインの金額の合計（円） */
+                visit_amount: number | null;
+                /** @description 予約とドロップインの金額の合計（円）。月額プランの料金は含まない */
+                total_amount: number;
+                /** @description 会議室の稼働率（％）。時間帯ごとのときと、会議室がないときは null */
+                utilization_rate: number | null;
+            }[];
+            totals: {
+                /** @description 会議室などの予約の件数（確定のもの） */
+                reservation_count: number;
+                /** @description 予約の時間の合計 */
+                reservation_hours: number;
+                /** @description 予約の金額の合計（円） */
+                reservation_amount: number;
+                /** @description ドロップインの利用の件数 */
+                visit_count: number | null;
+                /** @description ドロップインの利用時間の合計 */
+                visit_hours: number | null;
+                /** @description ドロップインの金額の合計（円） */
+                visit_amount: number | null;
+                /** @description 予約とドロップインの金額の合計（円）。月額プランの料金は含まない */
+                total_amount: number;
+                /** @description 会議室の稼働率（％）。時間帯ごとのときと、会議室がないときは null */
+                utilization_rate: number | null;
+            };
+        };
+        /** @description 会員数の集計（人数だけ。個人の情報は含まない） */
+        MemberStats: {
+            /** @example 2026-11 */
+            month: string;
+            /** @description 月末（今月なら今日）時点でプランを契約している人数 */
+            member_count: number;
+            /** @description その月に登録した人数 */
+            new_member_count: number;
+            /** @description その月に会議室を予約したか、ドロップインを使った人数 */
+            active_member_count: number;
+            by_plan: {
+                plan: {
+                    id: number;
+                    name: string;
+                    kind: string;
+                    price: number;
+                };
+                member_count: number;
+                /** @description 月額プランの料金の合計（ドロップインは0） */
+                plan_amount: number;
+            }[];
         };
         /** @description 受付のQRコードに入れるチェックイン用のコード。今と1つ前の時間枠のコードが有効 */
         CheckinCode: {

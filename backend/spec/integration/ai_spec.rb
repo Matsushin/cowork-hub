@@ -14,7 +14,7 @@ RSpec.describe "AI 機能の利用記録", type: :request do
         properties: {
           ai_request: {
             type: :object,
-            properties: { feature: { type: :string, enum: %w[booking] } },
+            properties: { feature: { type: :string, enum: AiRequest::FEATURES, description: "analytics は管理者だけ" } },
             required: %w[feature]
           }
         },
@@ -33,6 +33,12 @@ RSpec.describe "AI 機能の利用記録", type: :request do
           allow(AiRequest).to receive(:daily_limit).and_return(1)
           create(:ai_request, user:)
         end
+        run_test!
+      end
+
+      response "403", "管理者だけの機能（analytics）を一般会員が始めようとした" do
+        schema "$ref" => "#/components/schemas/Error"
+        let(:body) { { ai_request: { feature: "analytics" } } }
         run_test!
       end
 

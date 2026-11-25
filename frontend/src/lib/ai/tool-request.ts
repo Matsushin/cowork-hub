@@ -5,6 +5,8 @@ export type JsonSchemaProperty = {
   type?: "string" | "integer" | "number" | "boolean";
   format?: string;
   enum?: string[];
+  pattern?: string;
+  default?: string | number;
   description?: string;
 };
 
@@ -37,6 +39,9 @@ function serialize(name: string, value: unknown, schema: JsonSchemaProperty): st
   }
   if (schema.format === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new ToolInputError(`${name} は YYYY-MM-DD の形で指定してください`);
+  }
+  if (schema.pattern && !new RegExp(schema.pattern).test(value)) {
+    throw new ToolInputError(`${name} の形が正しくありません（${schema.pattern}）`);
   }
   if (schema.enum && !schema.enum.includes(value)) {
     throw new ToolInputError(`${name} は ${schema.enum.join("・")} のどれかで指定してください`);

@@ -31,6 +31,9 @@ Rails.application.routes.draw do
         get :checkin_code, on: :member # 受付に表示するQRコードの中身（60秒ごとに変わる）
       end
       resources :sales, only: :index
+      # 集計（分析アシスタントの道具にもなる）
+      get "stats/usage", to: "stats#usage"
+      get "stats/members", to: "stats#members"
     end
   end
 end
