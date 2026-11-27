@@ -65,11 +65,13 @@ def on_deployment(event):
     detail = event["detail"]
     name = event["resources"][0].rsplit("/", 1)[-1]
     service = next((s for s in describe_services() if s["serviceName"] == name), None)
+    # サービスが今使っているタスク定義のタグ。失敗したときは、戻した先（前の版）のタグになる
     tag = image_tag(service["taskDefinition"]) if service else "?"
     if detail["eventName"] == "SERVICE_DEPLOYMENT_COMPLETED":
         notify(f":rocket: デプロイ完了：{name}", f"`{tag}` で動いています")
     else:
-        notify(f":x: デプロイ失敗：{name}", f"{detail.get('reason', '理由は ECS のサービスのイベントを確認')}（`{tag}`）")
+        reason = detail.get("reason", "理由は ECS のサービスのイベントを確認してください")
+        notify(f":x: デプロイ失敗：{name}", f"{reason}\n今は `{tag}` で動いています（失敗した版ではなく、戻した先の版）")
 
 
 def on_state_change(event):
@@ -81,7 +83,8 @@ def on_state_change(event):
     previous = ssm.get_parameter(Name=STATE_PARAM)["Parameter"]["Value"]
     if state == previous:
         return
-    ssm.put_parameter(Name=STATE_PARAM, Value=state, Overwrite=True)
+    # 送ってから状態を書く。送った後に書き込みが失敗すると、再試行で2通届くことがある（通知が届かないよりよい）。
+    # 同時に動いて2通になるのは、Lambda を1つずつ動かす設定（service_notifications.tf）で防ぐ
     if state == "stopped":
         notify(
             ":crescent_moon: 夜間停止が完了しました",
@@ -90,6 +93,7 @@ def on_state_change(event):
     else:
         counts = "・".join(f"{s['serviceName']} {s['runningCount']}台" for s in services)
         notify(":sunrise: 起動が完了しました", f"{counts}が動いています")
+    ssm.put_parameter(Name=STATE_PARAM, Value=state, Overwrite=True)
 
 
 def handler(event, _context):

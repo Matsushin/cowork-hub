@@ -306,6 +306,8 @@ terraform -chdir=infra apply -var desired_count=0
 | 夜間停止の完了 | backend・frontend がすべて止まったとき（20:00 過ぎ） |
 | 起動の完了 | backend・frontend がすべて目標の台数で安定したとき（3:00 過ぎ）。起動に失敗すると届かず、代わりに「タスクの異常終了」のアラームが届く |
 
+通知の Lambda 自体が失敗したときは、アラーム（`cowork-hub-service-notify-errors`）が届きます。
+
 問題が起きたときと、元に戻ったときの両方を通知します。費用はアラーム15件で月200〜300円程度です（ログのメトリクスフィルターは無料、Budgets は2件まで無料）。
 
 ### Slack につなぐ

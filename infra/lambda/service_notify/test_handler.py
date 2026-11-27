@@ -67,7 +67,17 @@ class StateTest(unittest.TestCase):
         handler.handler({"detail-type": "ECS Deployment State Change", "resources": arn,
                          "detail": {"eventName": "SERVICE_DEPLOYMENT_FAILED", "reason": "ECS deployment circuit breaker"}}, None)
         self.assertEqual(self.titles(), [":rocket: デプロイ完了：backend", ":x: デプロイ失敗：backend"])
-        self.assertIn("abc1234", json.loads(handler.sns.publish.call_args_list[0].kwargs["Message"])["content"]["description"])
+        descriptions = [json.loads(c.kwargs["Message"])["content"]["description"] for c in handler.sns.publish.call_args_list]
+        self.assertIn("abc1234", descriptions[0])
+        self.assertIn("戻した先の版", descriptions[1])
+
+    def test_送れなかったら状態を書かない(self):
+        handler.sns.publish.side_effect = RuntimeError("SNS に送れない")
+        handler.ecs.describe_services.return_value = {"services": [svc("backend", 0, 0), svc("frontend", 0, 0)]}
+        with self.assertRaises(RuntimeError):
+            handler.handler({"detail-type": "ECS Task State Change", "detail": {}}, None)
+        handler.sns.publish.side_effect = None
+        self.assertEqual(self.stored["value"], "running")  # 再試行で、もう一度送れる
 
 
 if __name__ == "__main__":

@@ -128,6 +128,8 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false
       - run: terraform validate
+      # 通知の Lambda（Python）の判定のテスト（AWS を呼ばない）
+      - run: python3 -m unittest discover -s lambda/service_notify
 
   # 本番用のDockerイメージがビルドできるか（ベースイメージの更新漏れ・Dockerfileの誤りを検出する。pushはしない）
   docker:
