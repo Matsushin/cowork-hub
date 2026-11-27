@@ -1,12 +1,15 @@
+# 環境変数の値は to_json で引用符つきの文字列にして埋め込む（YAML の二重引用符の文字列として読まれる）。
+# 本番の DB のパスワードは RDS が自動で変える（Secrets Manager のローテーション）ので、「|」「>」「:」「#」などの
+# 記号で始まる・含むことがある。引用符なしで埋め込むと YAML として読めず、起動できなくなる（2026-11-27 に本番が止まった）
 default: &default
   adapter: mysql2
   encoding: utf8mb4
   collation: utf8mb4_0900_ai_ci
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  host: <%= ENV.fetch("DB_HOST") { "127.0.0.1" } %>
+  host: <%= ENV.fetch("DB_HOST") { "127.0.0.1" }.to_json %>
   port: <%= ENV.fetch("DB_PORT") { 3306 } %>
-  username: <%= ENV.fetch("DB_USERNAME") { "root" } %>
-  password: <%= ENV.fetch("DB_PASSWORD") { "password" } %>
+  username: <%= ENV.fetch("DB_USERNAME") { "root" }.to_json %>
+  password: <%= ENV.fetch("DB_PASSWORD") { "password" }.to_json %>
 
 development:
   <<: *default
@@ -18,4 +21,4 @@ test:
 
 production:
   <<: *default
-  database: <%= ENV.fetch("DB_NAME") { "cowork_hub_production" } %>
+  database: <%= ENV.fetch("DB_NAME") { "cowork_hub_production" }.to_json %>
