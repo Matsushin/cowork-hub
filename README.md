@@ -292,6 +292,7 @@ terraform -chdir=infra apply -var desired_count=0
 | | Next.js のサーバー側のエラー（`⨯` の行） | 5分間に1件以上 |
 | 可用性 | ALB：アプリの 5xx / ALB 自身の 5xx（503・504） | 5分間に5件以上 |
 | | 正常なタスクの数（backend / frontend） | 3分続けて0 |
+| | タスクの異常終了（定期ジョブ・起動の失敗など。終了コード 0 以外・起動できなかった。デプロイや夜間停止で止めたものは除く。どのタスクがなぜ止まったかは `/aws/events/cowork-hub-task-failures`） | 5分間に1件以上 |
 | 性能 | 応答時間の p95 | 10分続けて1秒超（`latency_p95_threshold_seconds`） |
 | | ECS の CPU / メモリ | 15分続けて80% / 85%超 |
 | | RDS の CPU / 空きメモリ / 空き容量 | 15分続けて80%超 / 64MB未満 / 2GB未満 |
