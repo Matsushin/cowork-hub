@@ -281,6 +281,19 @@ terraform -chdir=infra apply -var desired_count=0
 
 4. 基盤ができたら、上の「AWSへのデプロイ」の手順でイメージをpushし（`bin/deploy`）、タスクを起動します（`terraform -chdir=infra apply`）。
 
+### メールの送信（Amazon SES）
+
+予約の確定・取り消しのお知らせを、Amazon SES の API で会員に送ります（`infra/mail.tf`、backend の `aws-actionmailer-ses`）。backend のタスクの IAM ロールに「`no-reply@<domain_name>` から送る」権限だけを付けるので、SMTP のパスワードは作りません。`mail_enabled = true` にするまではメールは送られません（送る処理は動き、成功扱いになります）。
+
+1. `domain_name` を指定した状態で `terraform apply`。SES に送信元のドメインが登録され、DKIM の鍵ができます
+2. `terraform output mail_dns_records_to_add` の CNAME 3つを、ドメインの DNS に追加します（Route 53 を使う場合は自動）
+3. AWS コンソールの SES（東京リージョン）→「ID」で、ドメインが「検証済み」になるのを待ちます（DNS の反映後、数分〜数十分）
+4. `terraform.tfvars` に `mail_enabled = true` を書いて `terraform apply`。backend に `MAIL_DELIVERY=ses`・`MAIL_FROM` が渡り、新しいタスクから送り始めます
+5. **送れる宛先の制限（サンドボックス）を外す申請**：SES のコンソールの「アカウントダッシュボード」→「本番アクセスをリクエスト」。外れるまでは、SES で確認したメールアドレスあてにしか送れません（確認していない宛先への送信は失敗し、ジョブの失敗としてアラームが鳴ります）
+
+- 送れなかった（宛先がない・苦情）アドレスは、SES のアカウントの「抑制リスト」に入り、次からは送りません（SES の既定）
+- 費用は 1,000通あたり約0.1ドル
+
 ## 監視とSlack通知
 
 `infra/monitoring.tf` で、CloudWatch のアラームと AWS Budgets の通知を SNS トピックに集め、Amazon Q Developer in chat applications（旧 AWS Chatbot）で Slack に送ります。アプリのエラーの詳しい調査（スタックトレースなど）は Sentry で行います。

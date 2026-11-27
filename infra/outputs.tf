@@ -58,3 +58,15 @@ output "basic_auth" {
   description = "Basic 認証の ID と、パスワードを置いた SSM パラメーター（basic_auth_user を指定したときだけ）"
   value       = var.basic_auth_user == null ? null : { user = var.basic_auth_user, password_parameter = aws_ssm_parameter.basic_auth_password.name }
 }
+
+output "mail_dns_records_to_add" {
+  description = "Route 53 を使わない場合に、ドメインの DNS へ手で追加する CNAME（SES の DKIM。メールの送信元の確認用）"
+  value = local.mail_domain != null && !local.use_route53 ? [
+    for t in aws_sesv2_email_identity.app[0].dkim_signing_attributes[0].tokens : {
+      purpose = "メールの送信元の確認（DKIM）"
+      name    = "${t}._domainkey.${local.mail_domain}."
+      type    = "CNAME"
+      value   = "${t}.dkim.amazonses.com."
+    }
+  ] : null
+}

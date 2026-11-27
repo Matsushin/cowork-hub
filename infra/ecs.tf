@@ -133,8 +133,8 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "SOLID_QUEUE_IN_PUMA", value = "true" },
       # メール本文のリンク先
       { name = "APP_URL", value = local.app_origin },
-      # SMTP_ADDRESS などを渡すまでメールは実際には送られない（config/environments/production.rb）
-    ], local.sentry_env.backend)
+      # メールの送信の設定は mail.tf（mail_enabled のときだけ渡す。渡すまでメールは送られない）
+    ], local.sentry_env.backend, local.mail_env)
     secrets = [
       { name = "DB_PASSWORD", valueFrom = "${local.db_secret_arn}:password::" },
       { name = "SECRET_KEY_BASE", valueFrom = aws_ssm_parameter.secret_key_base.arn },
