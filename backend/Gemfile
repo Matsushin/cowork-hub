@@ -19,6 +19,8 @@ gem "pundit"
 
 # メール送信などの非同期処理（DBをキューとして使うので Redis が不要）
 gem "solid_queue"
+# 本番のメールを Amazon SES の API で送る（タスクの IAM ロールで送るので、SMTP のパスワードを持たない）
+gem "aws-actionmailer-ses"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]

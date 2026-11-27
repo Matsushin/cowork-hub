@@ -48,19 +48,16 @@ Rails.application.configure do
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue
 
-  # メール送信。SMTPの接続先（Amazon SES など）を環境変数で渡したときだけ実際に送る
-  if ENV["SMTP_ADDRESS"].present?
-    config.action_mailer.delivery_method = :smtp
-    config.action_mailer.smtp_settings = {
-      address: ENV["SMTP_ADDRESS"],
-      port: ENV.fetch("SMTP_PORT", 587).to_i,
-      user_name: ENV["SMTP_USERNAME"],
-      password: ENV["SMTP_PASSWORD"],
-      authentication: :login,
-      enable_starttls_auto: true
-    }
+  # メール送信（予約の確定・取り消しのお知らせ）
+  #   MAIL_DELIVERY=ses：Amazon SES の API で送る（aws-actionmailer-ses）。タスクの IAM ロールで送るので、パスワードを持たない
+  #     送信元のドメインの確認と、送れる宛先の制限の解除は AWS 側の作業（infra/mail.tf・README の「メールの送信」）
+  #   未設定：送らない（ジョブは成功扱いになる）。SES の準備ができるまでの状態
+  #   送れなかったときはジョブが失敗し（raise_delivery_errors）、Solid Queue のログに Error performing が出てアラームが鳴る
+  if ENV["MAIL_DELIVERY"] == "ses"
+    config.action_mailer.delivery_method = :ses_v2
+    config.action_mailer.ses_v2_settings = { region: ENV.fetch("AWS_REGION", "ap-northeast-1") }
+    config.action_mailer.raise_delivery_errors = true
   else
-    # 未設定なら送らない（ジョブは成功扱いになり、送信内容はログに出る）
     config.action_mailer.perform_deliveries = false
   end
 

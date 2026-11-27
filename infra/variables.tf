@@ -78,6 +78,15 @@ variable "use_route53" {
   default     = true
 }
 
+variable "mail_enabled" {
+  description = <<-EOT
+    予約のお知らせのメールを Amazon SES で送るか（mail.tf）。domain_name を指定し、
+    SES でドメインが確認済みになってから true にする。false なら backend はメールを送らない
+  EOT
+  type        = bool
+  default     = false
+}
+
 # ---- 監視（monitoring.tf） ----
 
 variable "slack_team_id" {
